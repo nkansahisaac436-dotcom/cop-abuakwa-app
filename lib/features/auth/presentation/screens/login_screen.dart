@@ -280,6 +280,69 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           text: AppStrings.createMemberAccount,
                           onPressed: _navigateToSignUp,
                         ),
+                        const SizedBox(height: 20),
+
+                        // Quick Demo Sign-In
+                        Text(
+                          'Quick Demo Sign-In (1-Tap)',
+                          style: GoogleFonts.nunitoSans(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.softGrey,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          alignment: WrapAlignment.center,
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            ActionChip(
+                              avatar: const Icon(Icons.shield_outlined, size: 16, color: AppColors.navy),
+                              label: const Text('Area Head'),
+                              backgroundColor: const Color(0xFFF0F4F8),
+                              labelStyle: GoogleFonts.nunitoSans(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.navy),
+                              onPressed: () {
+                                _emailController.text = 'areahead@copabuakwa.org';
+                                _passwordController.text = 'password123';
+                                _handleLogin();
+                              },
+                            ),
+                            ActionChip(
+                              avatar: const Icon(Icons.person_pin, size: 16, color: AppColors.gold),
+                              label: const Text('Pastor'),
+                              backgroundColor: const Color(0xFFFFF9E6),
+                              labelStyle: GoogleFonts.nunitoSans(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.goldText),
+                              onPressed: () {
+                                _emailController.text = 'pastor@copabuakwa.org';
+                                _passwordController.text = 'password123';
+                                _handleLogin();
+                              },
+                            ),
+                            ActionChip(
+                              avatar: const Icon(Icons.groups, size: 16, color: Color(0xFF0284C7)),
+                              label: const Text('Leader'),
+                              backgroundColor: const Color(0xFFF0F9FF),
+                              labelStyle: GoogleFonts.nunitoSans(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0284C7)),
+                              onPressed: () {
+                                _emailController.text = 'womenleader@copabuakwa.org';
+                                _passwordController.text = 'password123';
+                                _handleLogin();
+                              },
+                            ),
+                            ActionChip(
+                              avatar: const Icon(Icons.person_outline, size: 16, color: AppColors.softGrey),
+                              label: const Text('Member'),
+                              backgroundColor: const Color(0xFFF5F7FA),
+                              labelStyle: GoogleFonts.nunitoSans(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                              onPressed: () {
+                                _emailController.text = 'kofi@example.com';
+                                _passwordController.text = 'password123';
+                                _handleLogin();
+                              },
+                            ),
+                          ],
+                        ),
                       ],
                     ),
                   ),
