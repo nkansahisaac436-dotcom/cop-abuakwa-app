@@ -312,7 +312,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               avatar: const Icon(Icons.person_pin, size: 16, color: AppColors.gold),
                               label: const Text('Pastor'),
                               backgroundColor: const Color(0xFFFFF9E6),
-                              labelStyle: GoogleFonts.nunitoSans(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.goldText),
+                              labelStyle: GoogleFonts.nunitoSans(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.gold),
                               onPressed: () {
                                 _emailController.text = 'pastor@copabuakwa.org';
                                 _passwordController.text = 'password123';
@@ -323,7 +323,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               avatar: const Icon(Icons.groups, size: 16, color: Color(0xFF0284C7)),
                               label: const Text('Leader'),
                               backgroundColor: const Color(0xFFF0F9FF),
-                              labelStyle: GoogleFonts.nunitoSans(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0284C7)),
+                              labelStyle: GoogleFonts.nunitoSans(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF0284C7)),
                               onPressed: () {
                                 _emailController.text = 'womenleader@copabuakwa.org';
                                 _passwordController.text = 'password123';
@@ -334,7 +334,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               avatar: const Icon(Icons.person_outline, size: 16, color: AppColors.softGrey),
                               label: const Text('Member'),
                               backgroundColor: const Color(0xFFF5F7FA),
-                              labelStyle: GoogleFonts.nunitoSans(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                              labelStyle: GoogleFonts.nunitoSans(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.text),
                               onPressed: () {
                                 _emailController.text = 'kofi@example.com';
                                 _passwordController.text = 'password123';
