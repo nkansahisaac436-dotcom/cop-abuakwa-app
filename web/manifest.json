@@ -1,11 +1,11 @@
 {
-    "name": "cop_abuakwa_app",
-    "short_name": "cop_abuakwa_app",
+    "name": "Abuakwa Area Connect",
+    "short_name": "Area Connect",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#1F3A5F",
+    "theme_color": "#1F3A5F",
+    "description": "The Church of Pentecost, Abuakwa Area Connect app",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
