@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/constants/app_colors.dart';
@@ -14,6 +15,33 @@ import '../providers/auth_provider.dart';
 import 'signup_screen.dart';
 
 enum PastorLeaderAuthMode { login, inviteCode }
+
+class InviteCodeInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    var text = newValue.text.toUpperCase().replaceAll(RegExp(r'[^A-Z0-9]'), '');
+    if (text.length > 9) {
+      text = text.substring(0, 9);
+    }
+
+    final buffer = StringBuffer();
+    for (int i = 0; i < text.length; i++) {
+      if (i == 3 || i == 7) {
+        buffer.write('-');
+      }
+      buffer.write(text[i]);
+    }
+
+    final formatted = buffer.toString();
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+    );
+  }
+}
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -115,11 +143,30 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
-  Future<void> _handleVerifyInvite() async {
-    final code = _inviteCodeController.text.trim();
-    if (code.isEmpty) {
+  Future<void> _handlePasteCode() async {
+    final data = await Clipboard.getData('text/plain');
+    if (data != null && data.text != null && data.text!.isNotEmpty) {
+      final formatter = InviteCodeInputFormatter();
+      final formatted = formatter.formatEditUpdate(
+        TextEditingValue.empty,
+        TextEditingValue(text: data.text!),
+      );
       setState(() {
-        _inviteErrorMessage = 'Please enter your invite code.';
+        _inviteCodeController.text = formatted.text;
+        _inviteErrorMessage = null;
+      });
+
+      if (formatted.text.length == 11) {
+        _handleVerifyInvite();
+      }
+    }
+  }
+
+  Future<void> _handleVerifyInvite() async {
+    final code = _inviteCodeController.text.trim().toUpperCase();
+    if (code.isEmpty || code.length < 11) {
+      setState(() {
+        _inviteErrorMessage = 'Please enter a complete invite code (ABK-XXXX-XX).';
         _verifiedInvite = null;
       });
       return;
@@ -154,6 +201,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         });
       }
     }
+  }
+
+  void _resetInviteVerification() {
+    setState(() {
+      _verifiedInvite = null;
+      _inviteCodeController.clear();
+      _inviteErrorMessage = null;
+      _errorMessage = null;
+      _emailController.clear();
+      _passwordController.clear();
+    });
   }
 
   Future<void> _handleActivateAccount() async {
@@ -205,134 +263,140 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            // 1. Navy Header with Logo & Brand Titles
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.only(top: 48, bottom: 36, left: 20, right: 20),
-              decoration: const BoxDecoration(
-                gradient: AppColors.navyGradient,
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(32),
-                  bottomRight: Radius.circular(32),
+      resizeToAvoidBottomInset: true,
+      body: SafeArea(
+        top: false,
+        child: SingleChildScrollView(
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Column(
+            children: [
+              // 1. Navy Header with Logo & Brand Titles
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.only(top: 48, bottom: 36, left: 20, right: 20),
+                decoration: const BoxDecoration(
+                  gradient: AppColors.navyGradient,
+                  borderRadius: BorderRadius.only(
+                    bottomLeft: Radius.circular(32),
+                    bottomRight: Radius.circular(32),
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 8),
+                    const DistrictRingLogo(size: 88),
+                    const SizedBox(height: 14),
+                    Text(
+                      AppStrings.appName,
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.sourceSerif4(
+                        fontSize: AppDimensions.fontSizeAppName,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      AppStrings.churchAreaName,
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.nunitoSans(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.lightGold,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              child: Column(
-                children: [
-                  const SizedBox(height: 8),
-                  const DistrictRingLogo(size: 88),
-                  const SizedBox(height: 14),
-                  Text(
-                    AppStrings.appName,
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.sourceSerif4(
-                      fontSize: AppDimensions.fontSizeAppName,
-                      fontWeight: FontWeight.bold,
+
+              // 2. White Form Card
+              Transform.translate(
+                offset: const Offset(0, -18),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Container(
+                    width: double.infinity,
+                    constraints: const BoxConstraints(maxWidth: 480),
+                    padding: const EdgeInsets.all(20.0),
+                    decoration: BoxDecoration(
                       color: AppColors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    AppStrings.churchAreaName,
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.nunitoSans(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      color: AppColors.lightGold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // 2. White Form Card
-            Transform.translate(
-              offset: const Offset(0, -18),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: Container(
-                  width: double.infinity,
-                  constraints: const BoxConstraints(maxWidth: 480),
-                  padding: const EdgeInsets.all(20.0),
-                  decoration: BoxDecoration(
-                    color: AppColors.white,
-                    borderRadius: AppDimensions.cardBorderRadius,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.08),
-                        blurRadius: 18,
-                        offset: const Offset(0, 6),
-                      ),
-                    ],
-                  ),
-                  child: Form(
-                    key: _formKey,
-                    autovalidateMode: _submitted ? AutovalidateMode.onUserInteraction : AutovalidateMode.disabled,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Selector: "I am logging in as"
-                        Text(
-                          'I am logging in as',
-                          style: GoogleFonts.nunitoSans(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.text,
-                          ),
+                      borderRadius: AppDimensions.cardBorderRadius,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.08),
+                          blurRadius: 18,
+                          offset: const Offset(0, 6),
                         ),
-                        const SizedBox(height: 10),
-
-                        // 4 Role Chips (Responsive on 360px)
-                        _buildRoleChips(),
-                        const SizedBox(height: 16),
-
-                        // Error Banner if present
-                        if (_errorMessage != null) ...[
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFDE8E8),
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: AppColors.error.withValues(alpha: 0.4)),
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(Icons.error_outline, color: AppColors.error, size: 20),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Text(
-                                    _errorMessage!,
-                                    style: GoogleFonts.nunitoSans(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
-                                      color: AppColors.error,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 14),
-                        ],
-
-                        // Render Form Based on Selected Role
-                        if (_selectedRole == UserRole.member)
-                          _buildMemberForm()
-                        else if (_selectedRole == UserRole.pastor || _selectedRole == UserRole.ministryLeader)
-                          _buildPastorLeaderForm()
-                        else if (_selectedRole == UserRole.areaHead)
-                          _buildAreaHeadForm(),
                       ],
                     ),
+                    child: Form(
+                      key: _formKey,
+                      autovalidateMode: _submitted ? AutovalidateMode.onUserInteraction : AutovalidateMode.disabled,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Selector: "I am logging in as"
+                          Text(
+                            'I am logging in as',
+                            style: GoogleFonts.nunitoSans(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.text,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+
+                          // 4 Role Chips (Responsive on 360px)
+                          _buildRoleChips(),
+                          const SizedBox(height: 16),
+
+                          // General Error Banner if present
+                          if (_errorMessage != null) ...[
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFDE8E8),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: AppColors.error.withValues(alpha: 0.4)),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.error_outline, color: AppColors.error, size: 20),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      _errorMessage!,
+                                      style: GoogleFonts.nunitoSans(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.error,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+                          ],
+
+                          // Render Form Based on Selected Role
+                          if (_selectedRole == UserRole.member)
+                            _buildMemberForm()
+                          else if (_selectedRole == UserRole.pastor || _selectedRole == UserRole.ministryLeader)
+                            _buildPastorLeaderForm()
+                          else if (_selectedRole == UserRole.areaHead)
+                            _buildAreaHeadForm(),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ),
-            const SizedBox(height: 24),
-          ],
+              const SizedBox(height: 24),
+            ],
+          ),
         ),
       ),
     );
@@ -590,7 +654,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         const SizedBox(height: 16),
 
         if (_pastorLeaderMode == PastorLeaderAuthMode.login) ...[
-          // Option A: Log In
+          // Option A: Log In Form
           AppTextField(
             label: AppStrings.email,
             hintText: AppStrings.emailPlaceholder,
@@ -653,144 +717,233 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ),
           ),
         ] else ...[
-          // Option B: Invite Code Verification & Account Activation
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
+          // Option B: Two-Step Invite Code Flow
+          if (_verifiedInvite == null)
+            _buildInviteStepOne()
+          else
+            _buildInviteStepTwo(),
+        ],
+      ],
+    );
+  }
+
+  /// STEP 1: Code Entry & Verification
+  Widget _buildInviteStepOne() {
+    final codeText = _inviteCodeController.text.trim();
+    final isCodeComplete = codeText.length == 11;
+    final hasError = _inviteErrorMessage != null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Full-width Invite Code Field
+        AppTextField(
+          label: 'Invite code',
+          hintText: 'ABK-XXXX-XX',
+          controller: _inviteCodeController,
+          prefixIcon: const Icon(Icons.vpn_key_outlined),
+          inputFormatters: [InviteCodeInputFormatter()],
+          textCapitalization: TextCapitalization.characters,
+          hasError: hasError,
+          errorText: _inviteErrorMessage,
+          suffixIcon: IconButton(
+            icon: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.content_paste_outlined, size: 16, color: AppColors.navy),
+                const SizedBox(width: 4),
+                Text(
+                  'Paste',
+                  style: GoogleFonts.nunitoSans(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.navy,
+                  ),
+                ),
+              ],
+            ),
+            tooltip: 'Paste from Clipboard',
+            onPressed: _handlePasteCode,
+          ),
+          onChanged: (val) {
+            setState(() {
+              _inviteErrorMessage = null;
+            });
+            // Auto-verify as soon as the code is complete (11 chars)
+            if (val.length == 11) {
+              _handleVerifyInvite();
+            }
+          },
+        ),
+        const SizedBox(height: 16),
+
+        // Full-width Navy Verify Code Button
+        PrimaryButton(
+          text: 'Verify code',
+          isLoading: _isVerifyingInvite,
+          onPressed: (isCodeComplete && !_isVerifyingInvite) ? _handleVerifyInvite : null,
+        ),
+        const SizedBox(height: 16),
+
+        // Help note
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF4F7FB),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Text(
+            'Invite codes are single-use and provided directly by the Area Head office.',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.nunitoSans(
+              fontSize: 12,
+              color: AppColors.softGrey,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// STEP 2: Locked Code, Green Verification Card, & Account Activation Form
+  Widget _buildInviteStepTwo() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Locked Invite Code Display with "Change code" link
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF5F7FA),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Row(
             children: [
+              const Icon(Icons.vpn_key, size: 18, color: AppColors.navy),
+              const SizedBox(width: 8),
               Expanded(
-                child: AppTextField(
-                  label: 'Invite code',
-                  hintText: 'ABK-XXXX-XX',
-                  controller: _inviteCodeController,
-                  prefixIcon: const Icon(Icons.vpn_key_outlined),
-                  suffixIcon: _verifiedInvite != null
-                      ? const Icon(Icons.check_circle, color: AppColors.success, size: 22)
-                      : null,
-                  onChanged: (val) {
-                    if (_verifiedInvite != null) {
-                      setState(() {
-                        _verifiedInvite = null;
-                      });
-                    }
-                  },
+                child: Text(
+                  _verifiedInvite!.code,
+                  style: GoogleFonts.nunitoSans(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.2,
+                    color: AppColors.navy,
+                  ),
                 ),
               ),
+              const Icon(Icons.check_circle, color: AppColors.success, size: 20),
               const SizedBox(width: 8),
-              SizedBox(
-                height: 52,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.navy,
-                    foregroundColor: AppColors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
+              TextButton(
+                style: TextButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  minimumSize: const Size(50, 30),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                onPressed: _resetInviteVerification,
+                child: Text(
+                  'Change code',
+                  style: GoogleFonts.nunitoSans(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.gold,
                   ),
-                  onPressed: _isVerifyingInvite ? null : _handleVerifyInvite,
-                  child: _isVerifyingInvite
-                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.white))
-                      : Text('Verify', style: GoogleFonts.nunitoSans(fontWeight: FontWeight.bold, fontSize: 13)),
                 ),
               ),
             ],
           ),
+        ),
+        const SizedBox(height: 12),
 
-          if (_inviteErrorMessage != null) ...[
-            const SizedBox(height: 8),
-            Text(
-              _inviteErrorMessage!,
-              style: GoogleFonts.nunitoSans(fontSize: 12, color: AppColors.error, fontWeight: FontWeight.w600),
-            ),
-          ],
-          const SizedBox(height: 14),
-
-          // Green Card: Invitation Verified
-          if (_verifiedInvite != null) ...[
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: const Color(0xFFEAF7EE),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: const Color(0xFF34A853), width: 1.2),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.check_circle, color: Color(0xFF2E7D32), size: 24),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Invitation verified',
-                          style: GoogleFonts.nunitoSans(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: const Color(0xFF1E4620),
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          _verifiedInvite!.roleDisplay,
-                          style: GoogleFonts.nunitoSans(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: const Color(0xFF2E7D32),
-                          ),
-                        ),
-                      ],
+        // Green Card: Invitation Verified
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: const Color(0xFFEAF7EE),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFF34A853), width: 1.2),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.check_circle, color: Color(0xFF2E7D32), size: 24),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Invitation verified',
+                      style: GoogleFonts.nunitoSans(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF1E4620),
+                      ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 2),
+                    Text(
+                      _verifiedInvite!.roleDisplay,
+                      style: GoogleFonts.nunitoSans(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF2E7D32),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 14),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
 
-            // Email Field
-            AppTextField(
-              label: AppStrings.email,
-              hintText: 'kofi@example.com',
-              controller: _emailController,
-              keyboardType: TextInputType.emailAddress,
-              prefixIcon: const Icon(Icons.email_outlined),
-              validator: (value) {
-                if (!_submitted) return null;
-                if (value == null || value.trim().isEmpty) {
-                  return 'Please enter your email address';
-                }
-                if (!value.contains('@') || !value.contains('.')) {
-                  return 'Please enter a valid email address';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 14),
+        // Email Field
+        AppTextField(
+          label: AppStrings.email,
+          hintText: 'kofi@example.com',
+          controller: _emailController,
+          keyboardType: TextInputType.emailAddress,
+          prefixIcon: const Icon(Icons.email_outlined),
+          validator: (value) {
+            if (!_submitted) return null;
+            if (value == null || value.trim().isEmpty) {
+              return 'Please enter your email address';
+            }
+            if (!value.contains('@') || !value.contains('.')) {
+              return 'Please enter a valid email address';
+            }
+            return null;
+          },
+        ),
+        const SizedBox(height: 14),
 
-            // Create a Password Field
-            AppTextField(
-              label: 'Create a password',
-              hintText: 'Choose a password',
-              controller: _passwordController,
-              isPassword: true,
-              prefixIcon: const Icon(Icons.lock_outline),
-              validator: (value) {
-                if (!_submitted) return null;
-                if (value == null || value.length < 6) {
-                  return 'Password must be at least 6 characters';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 20),
+        // Create a Password Field
+        AppTextField(
+          label: 'Create a password',
+          hintText: 'Choose a password',
+          controller: _passwordController,
+          isPassword: true,
+          prefixIcon: const Icon(Icons.lock_outline),
+          validator: (value) {
+            if (!_submitted) return null;
+            if (value == null || value.length < 6) {
+              return 'Password must be at least 6 characters';
+            }
+            return null;
+          },
+        ),
+        const SizedBox(height: 20),
 
-            // Activate My Account Button
-            PrimaryButton(
-              text: 'Activate my account',
-              isLoading: _isLoading,
-              onPressed: _handleActivateAccount,
-            ),
-          ],
-        ],
+        // Activate My Account Button
+        PrimaryButton(
+          text: 'Activate my account',
+          isLoading: _isLoading,
+          onPressed: _handleActivateAccount,
+        ),
       ],
     );
   }

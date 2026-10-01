@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../constants/app_colors.dart';
 import '../constants/app_dimensions.dart';
@@ -19,6 +20,9 @@ class AppTextField extends StatefulWidget {
   final ValueChanged<String>? onChanged;
   final FormFieldValidator<String>? validator;
   final int maxLines;
+  final List<TextInputFormatter>? inputFormatters;
+  final TextCapitalization textCapitalization;
+  final FocusNode? focusNode;
 
   const AppTextField({
     super.key,
@@ -36,6 +40,9 @@ class AppTextField extends StatefulWidget {
     this.onChanged,
     this.validator,
     this.maxLines = 1,
+    this.inputFormatters,
+    this.textCapitalization = TextCapitalization.none,
+    this.focusNode,
   });
 
   @override
@@ -65,10 +72,13 @@ class _AppTextFieldState extends State<AppTextField> {
           constraints: const BoxConstraints(minHeight: AppDimensions.minTouchTarget),
           child: TextFormField(
             controller: widget.controller,
+            focusNode: widget.focusNode,
             initialValue: widget.initialValue,
             enabled: widget.enabled,
             obscureText: widget.isPassword ? _obscureText : false,
             keyboardType: widget.keyboardType,
+            textCapitalization: widget.textCapitalization,
+            inputFormatters: widget.inputFormatters,
             maxLines: widget.isPassword ? 1 : widget.maxLines,
             onChanged: widget.onChanged,
             validator: widget.validator,

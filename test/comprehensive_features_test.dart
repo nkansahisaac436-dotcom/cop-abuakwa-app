@@ -49,7 +49,24 @@ void main() {
       expect(find.text(AppStrings.createMemberAccount), findsOneWidget);
     });
 
-    testWidgets('Tapping Pastor displays login toggle and invite code verification flow', (WidgetTester tester) async {
+    testWidgets('LoginScreen renders and scrolls without overflow on large iPhone (430px)', (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(430, 932);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      await tester.pumpWidget(
+        const ProviderScope(
+          child: MaterialApp(
+            home: LoginScreen(),
+          ),
+        ),
+      );
+
+      expect(find.text('I am logging in as'), findsOneWidget);
+      expect(find.byType(SingleChildScrollView), findsOneWidget);
+    });
+
+    testWidgets('Two-step invite code flow works cleanly with auto-format, verification, and change code', (WidgetTester tester) async {
       await tester.pumpWidget(
         const ProviderScope(
           child: MaterialApp(
@@ -62,29 +79,37 @@ void main() {
       await tester.tap(find.text('Pastor'));
       await tester.pumpAndSettle();
 
-      // Should see Log in & I have an invite code toggle (one on toggle, one on submit button)
+      // Should see Log in & I have an invite code toggle
       expect(find.text('Log in'), findsNWidgets(2));
       expect(find.text('I have an invite code'), findsOneWidget);
       expect(find.text('No account yet? Ask your Area Head to send you an invite code.'), findsOneWidget);
       expect(find.text(AppStrings.createMemberAccount), findsNothing);
 
-      // Switch to "I have an invite code"
+      // Switch to "I have an invite code" (Step 1)
       await tester.tap(find.text('I have an invite code'));
       await tester.pumpAndSettle();
 
       expect(find.text('Invite code'), findsOneWidget);
-      expect(find.text('Verify'), findsOneWidget);
+      expect(find.text('Paste'), findsOneWidget);
+      expect(find.text('Verify code'), findsOneWidget);
 
-      // Enter valid preloaded Pastor invite code
+      // Enter valid preloaded Pastor invite code (auto-verifies on 11 characters)
       await tester.enterText(find.byType(TextFormField).first, 'ABK-7K4P-2M');
-      await tester.tap(find.text('Verify'));
       await tester.pumpAndSettle();
 
-      // Green card verification badge
+      // Step 2: Green card verification badge, locked code, Change code link
       expect(find.text('Invitation verified'), findsOneWidget);
       expect(find.text('Pastor, Abuakwa Central District'), findsOneWidget);
+      expect(find.text('Change code'), findsOneWidget);
       expect(find.text('Create a password'), findsOneWidget);
       expect(find.text('Activate my account'), findsOneWidget);
+
+      // Tap "Change code" to return to Step 1
+      await tester.tap(find.text('Change code'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Verify code'), findsOneWidget);
+      expect(find.text('Invitation verified'), findsNothing);
     });
 
     testWidgets('SignUpScreen renders all required fields', (WidgetTester tester) async {

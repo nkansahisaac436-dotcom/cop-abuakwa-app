@@ -297,8 +297,7 @@ class SupabaseAuthRepository implements AuthRepository {
 
     // 1. Check Rate Limiting (15-min lockout after 5 failed tries)
     if (_inviteLockoutUntil != null && _inviteLockoutUntil!.isAfter(DateTime.now())) {
-      final remainingMins = _inviteLockoutUntil!.difference(DateTime.now()).inMinutes + 1;
-      throw Exception('Too many failed attempts. Try again in $remainingMins minutes.');
+      throw Exception('Too many tries. Please wait 15 minutes and try again.');
     }
 
     // 2. Mock / Offline Mode Verification
@@ -310,6 +309,9 @@ class SupabaseAuthRepository implements AuthRepository {
 
       if (match == null) {
         _recordFailedInviteAttempt();
+        if (_failedInviteAttempts >= 5) {
+          throw Exception('Too many tries. Please wait 15 minutes and try again.');
+        }
         throw Exception('This code is not valid. Ask your Area Head for a new one.');
       }
 
@@ -328,12 +330,15 @@ class SupabaseAuthRepository implements AuthRepository {
         return InviteModel.fromJson(Map<String, dynamic>.from(res));
       }
       _recordFailedInviteAttempt();
+      if (_failedInviteAttempts >= 5) {
+        throw Exception('Too many tries. Please wait 15 minutes and try again.');
+      }
       throw Exception('This code is not valid. Ask your Area Head for a new one.');
     } catch (e) {
       _recordFailedInviteAttempt();
       final errStr = e.toString();
-      if (errStr.contains('Too many failed attempts')) {
-        throw Exception('Too many failed attempts. Try again in 15 minutes.');
+      if (errStr.contains('Too many') || _failedInviteAttempts >= 5) {
+        throw Exception('Too many tries. Please wait 15 minutes and try again.');
       }
       throw Exception('This code is not valid. Ask your Area Head for a new one.');
     }
