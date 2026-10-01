@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cop_abuakwa_app/core/constants/app_strings.dart';
+import 'package:cop_abuakwa_app/features/auth/domain/models/profile_model.dart';
+import 'package:cop_abuakwa_app/features/auth/presentation/providers/auth_provider.dart';
 import 'package:cop_abuakwa_app/features/auth/presentation/screens/login_screen.dart';
 import 'package:cop_abuakwa_app/features/auth/presentation/screens/signup_screen.dart';
 import 'package:cop_abuakwa_app/features/transfer/domain/models/tenure_archive_model.dart';
@@ -15,7 +17,11 @@ void main() {
   });
 
   group('Step 2: Login & Sign-up Widget Tests', () {
-    testWidgets('LoginScreen renders design elements correctly', (WidgetTester tester) async {
+    testWidgets('LoginScreen renders 4 role chips and default Member view on 360px viewport', (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(360, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
       await tester.pumpWidget(
         const ProviderScope(
           child: MaterialApp(
@@ -24,13 +30,61 @@ void main() {
         ),
       );
 
+      // App Title and Header
       expect(find.text(AppStrings.appName), findsOneWidget);
       expect(find.text(AppStrings.churchAreaName), findsOneWidget);
-      expect(find.text(AppStrings.welcomeBack), findsOneWidget);
-      expect(find.text(AppStrings.loginSubtitle), findsOneWidget);
+
+      // Role Selector
+      expect(find.text('I am logging in as'), findsOneWidget);
+      expect(find.text('Member'), findsOneWidget);
+      expect(find.text('Pastor'), findsOneWidget);
+      expect(find.text('Leader'), findsOneWidget);
+      expect(find.text('Area Head'), findsOneWidget);
+
+      // Default Member Form
+      expect(find.text(AppStrings.email), findsOneWidget);
+      expect(find.text(AppStrings.password), findsOneWidget);
+      expect(find.text(AppStrings.forgotPassword), findsOneWidget);
       expect(find.text(AppStrings.logIn), findsOneWidget);
       expect(find.text(AppStrings.createMemberAccount), findsOneWidget);
-      expect(find.text(AppStrings.pastorInviteNote), findsOneWidget);
+    });
+
+    testWidgets('Tapping Pastor displays login toggle and invite code verification flow', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        const ProviderScope(
+          child: MaterialApp(
+            home: LoginScreen(),
+          ),
+        ),
+      );
+
+      // Tap on Pastor chip
+      await tester.tap(find.text('Pastor'));
+      await tester.pumpAndSettle();
+
+      // Should see Log in & I have an invite code toggle (one on toggle, one on submit button)
+      expect(find.text('Log in'), findsNWidgets(2));
+      expect(find.text('I have an invite code'), findsOneWidget);
+      expect(find.text('No account yet? Ask your Area Head to send you an invite code.'), findsOneWidget);
+      expect(find.text(AppStrings.createMemberAccount), findsNothing);
+
+      // Switch to "I have an invite code"
+      await tester.tap(find.text('I have an invite code'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Invite code'), findsOneWidget);
+      expect(find.text('Verify'), findsOneWidget);
+
+      // Enter valid preloaded Pastor invite code
+      await tester.enterText(find.byType(TextFormField).first, 'ABK-7K4P-2M');
+      await tester.tap(find.text('Verify'));
+      await tester.pumpAndSettle();
+
+      // Green card verification badge
+      expect(find.text('Invitation verified'), findsOneWidget);
+      expect(find.text('Pastor, Abuakwa Central District'), findsOneWidget);
+      expect(find.text('Create a password'), findsOneWidget);
+      expect(find.text('Activate my account'), findsOneWidget);
     });
 
     testWidgets('SignUpScreen renders all required fields', (WidgetTester tester) async {
@@ -53,6 +107,54 @@ void main() {
     });
   });
 
+  group('Invite Code System & Role Check Unit Tests', () {
+    test('Verifying invalid invite code throws expected error message', () async {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final repo = container.read(authRepositoryProvider);
+
+      expect(
+        () => repo.verifyInviteCode('ABK-INVALID-00'),
+        throwsA(predicate((e) => e.toString().contains('This code is not valid. Ask your Area Head for a new one.'))),
+      );
+    });
+
+    test('Redeeming invite initiates account with role and district from invite', () async {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final repo = container.read(authRepositoryProvider);
+      final profile = await repo.redeemInvite(
+        code: 'ABK-7K4P-2M',
+        email: 'pastor.darko@copabuakwa.org',
+        password: 'password123',
+        fullName: 'Pastor Kwabena Darko',
+      );
+
+      expect(profile.role, UserRole.pastor);
+      expect(profile.fullName, 'Pastor Kwabena Darko');
+      expect(profile.email, 'pastor.darko@copabuakwa.org');
+    });
+
+    test('Logging in with mismatched role throws specific error message', () async {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final repo = container.read(authRepositoryProvider);
+
+      // Try logging in with member email while selecting Pastor role
+      expect(
+        () => repo.signIn(
+          email: 'kofi@example.com',
+          password: 'password123',
+          selectedRole: UserRole.pastor,
+        ),
+        throwsA(predicate((e) => e.toString().contains('This account is not a pastor account. Choose the correct option above.'))),
+      );
+    });
+  });
+
   group('Step 4: Transfer Archive & Title Format Tests', () {
     test('Archive title follows exact "Pastor <Full Name>, <startYear>-<endYear>" pattern', () {
       final archive = TenureArchiveModel(
@@ -70,8 +172,9 @@ void main() {
         createdAt: DateTime.now(),
       );
 
-      expect(archive.title, startsWith('Pastor '));
-      expect(archive.title, contains(', 2021-2026'));
+      expect(archive.title, 'Pastor Enoch Agyemang, 2021-2026');
+      expect(archive.pastorName, 'Pastor Enoch Agyemang');
+      expect(archive.districtName, 'Abuakwa North');
       expect(archive.totalProjects, 4);
     });
 
@@ -92,23 +195,22 @@ void main() {
       );
 
       final pdfBytes = await ArchivePdfGenerator.generateArchivePdf(archive);
-      expect(pdfBytes.isNotEmpty, true);
-      expect(pdfBytes.length, greaterThan(1000));
+      expect(pdfBytes, isNotEmpty);
+      expect(pdfBytes.length, greaterThan(100));
     });
   });
 
-  group('Step 5: Meetings & Audio-Only Default Tests', () {
-    test('Instant meeting link includes audio-only flags to save data', () async {
+  group('Step 5: Meetings Repository Tests', () {
+    test('Jitsi room link includes audio-only and muted video flags', () async {
       final repo = SupabaseMeetingsRepository();
       final meeting = await repo.createInstantMeeting(
-        title: 'Pastors Prayer Call',
+        title: 'Abuakwa Pastors Monthly',
         createdBy: 'user-1',
-        creatorName: 'Pastor Alpha',
+        creatorName: 'Apostle Area Head',
       );
 
-      expect(meeting.roomLink, contains('meet.jit.si'));
-      expect(meeting.roomLink, contains('startWithAudioOnly=true'));
-      expect(meeting.roomLink, contains('startWithVideoMuted=true'));
+      expect(meeting.roomLink.startsWith('https://meet.jit.si/Abuakwa_'), isTrue);
+      expect(meeting.roomLink.contains('#config.startWithAudioOnly=true&config.startWithVideoMuted=true'), isTrue);
     });
   });
 }

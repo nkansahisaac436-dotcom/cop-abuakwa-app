@@ -38,3 +38,9 @@
 
 ### Decision 4: Offline & Local Storage
 - **Hive / Hive Flutter:** Used for local caching of feeds and offline draft persistence.
+
+### Decision 5: One Login Page, Four Ways In & Invite Codes (Section 5.1b)
+- **Role Selector:** Single login page with 4 chips (`Member`, `Pastor`, `Leader`, `Area Head`) that adjusts the input form dynamically. Fits on 360px viewports without wrapping.
+- **Role Guard:** Post-authentication validation compares user's real database role with the selected role. On mismatch, the session is cancelled and an informative error is displayed.
+- **Pastor & Leader Invite Codes:** Format `ABK-XXXX-XX`, single-use, 7-day expiration, rate-limited (locked for 15 minutes after 5 failed attempts). Verification card displays assigned role and district/ministry.
+- **Area Head Invites Hub:** Area Head generates codes for incoming pastors and ministry leaders with one-tap WhatsApp, SMS, and clipboard sharing, plus active invite cancellation.

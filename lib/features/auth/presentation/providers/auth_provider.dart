@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/auth_repository.dart';
 import '../../domain/models/profile_model.dart';
+import '../../domain/models/invite_model.dart';
 import '../../../districts/presentation/providers/districts_provider.dart';
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
@@ -19,11 +20,19 @@ class AuthNotifier extends AsyncNotifier<UserProfile?> {
     return repo.getCurrentProfile();
   }
 
-  Future<void> signIn({required String email, required String password}) async {
+  Future<void> signIn({
+    required String email,
+    required String password,
+    required UserRole selectedRole,
+  }) async {
     state = const AsyncValue.loading();
     try {
       final repo = ref.read(authRepositoryProvider);
-      final profile = await repo.signIn(email: email, password: password);
+      final profile = await repo.signIn(
+        email: email,
+        password: password,
+        selectedRole: selectedRole,
+      );
       state = AsyncValue.data(profile);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
@@ -55,17 +64,26 @@ class AuthNotifier extends AsyncNotifier<UserProfile?> {
     }
   }
 
-  Future<void> invitePastor({
-    required String fullName,
+  Future<void> redeemInvite({
+    required String code,
     required String email,
-    required String districtId,
+    required String password,
+    required String fullName,
   }) async {
-    final repo = ref.read(authRepositoryProvider);
-    await repo.invitePastor(
-      fullName: fullName,
-      email: email,
-      districtId: districtId,
-    );
+    state = const AsyncValue.loading();
+    try {
+      final repo = ref.read(authRepositoryProvider);
+      final profile = await repo.redeemInvite(
+        code: code,
+        email: email,
+        password: password,
+        fullName: fullName,
+      );
+      state = AsyncValue.data(profile);
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+      rethrow;
+    }
   }
 
   Future<void> signOut() async {
@@ -77,5 +95,44 @@ class AuthNotifier extends AsyncNotifier<UserProfile?> {
 
   void setMockProfile(UserProfile profile) {
     state = AsyncValue.data(profile);
+  }
+}
+
+final invitesListProvider = AsyncNotifierProvider<InvitesNotifier, List<InviteModel>>(() {
+  return InvitesNotifier();
+});
+
+class InvitesNotifier extends AsyncNotifier<List<InviteModel>> {
+  @override
+  Future<List<InviteModel>> build() async {
+    final repo = ref.watch(authRepositoryProvider);
+    return repo.getInvites();
+  }
+
+  Future<InviteModel> createInvite({
+    required UserRole role,
+    required String targetName,
+    String? districtId,
+    String? districtName,
+    String? ministryId,
+    String? ministryName,
+  }) async {
+    final repo = ref.read(authRepositoryProvider);
+    final invite = await repo.createInvite(
+      role: role,
+      targetName: targetName,
+      districtId: districtId,
+      districtName: districtName,
+      ministryId: ministryId,
+      ministryName: ministryName,
+    );
+    ref.invalidateSelf();
+    return invite;
+  }
+
+  Future<void> cancelInvite(String inviteId) async {
+    final repo = ref.read(authRepositoryProvider);
+    await repo.cancelInvite(inviteId);
+    ref.invalidateSelf();
   }
 }

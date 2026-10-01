@@ -7,6 +7,19 @@ enum UserRole {
   final String value;
   const UserRole(this.value);
 
+  String get label {
+    switch (this) {
+      case UserRole.areaHead:
+        return 'Area Head';
+      case UserRole.pastor:
+        return 'Pastor';
+      case UserRole.ministryLeader:
+        return 'Ministry Leader';
+      case UserRole.member:
+        return 'Member';
+    }
+  }
+
   static UserRole fromString(String? val) {
     return UserRole.values.firstWhere(
       (r) => r.value == val,
