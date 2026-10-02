@@ -52,7 +52,9 @@ class UserProfile {
   final UserRole role;
   final ProfileStatus status;
   final String? districtId;
+  final String? districtName;
   final String? assemblyId;
+  final String? ministryName;
   final String? avatarUrl;
   final bool dataConsentAccepted;
   final DateTime createdAt;
@@ -65,7 +67,9 @@ class UserProfile {
     this.role = UserRole.member,
     this.status = ProfileStatus.active,
     this.districtId,
+    this.districtName,
     this.assemblyId,
+    this.ministryName,
     this.avatarUrl,
     this.dataConsentAccepted = true,
     required this.createdAt,
@@ -77,6 +81,38 @@ class UserProfile {
   bool get isMember => role == UserRole.member;
   bool get isTransferred => status == ProfileStatus.transferred;
 
+  UserProfile copyWith({
+    String? id,
+    String? fullName,
+    String? email,
+    String? phone,
+    UserRole? role,
+    ProfileStatus? status,
+    String? districtId,
+    String? districtName,
+    String? assemblyId,
+    String? ministryName,
+    String? avatarUrl,
+    bool? dataConsentAccepted,
+    DateTime? createdAt,
+  }) {
+    return UserProfile(
+      id: id ?? this.id,
+      fullName: fullName ?? this.fullName,
+      email: email ?? this.email,
+      phone: phone ?? this.phone,
+      role: role ?? this.role,
+      status: status ?? this.status,
+      districtId: districtId ?? this.districtId,
+      districtName: districtName ?? this.districtName,
+      assemblyId: assemblyId ?? this.assemblyId,
+      ministryName: ministryName ?? this.ministryName,
+      avatarUrl: avatarUrl ?? this.avatarUrl,
+      dataConsentAccepted: dataConsentAccepted ?? this.dataConsentAccepted,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
   factory UserProfile.fromJson(Map<String, dynamic> json) {
     return UserProfile(
       id: json['id'] as String,
@@ -86,7 +122,9 @@ class UserProfile {
       role: UserRole.fromString(json['role'] as String?),
       status: ProfileStatus.fromString(json['status'] as String?),
       districtId: json['district_id'] as String?,
+      districtName: json['district_name'] as String?,
       assemblyId: json['assembly_id'] as String?,
+      ministryName: json['ministry_name'] as String?,
       avatarUrl: json['avatar_url'] as String?,
       dataConsentAccepted: json['data_consent_accepted'] as bool? ?? true,
       createdAt: json['created_at'] != null
@@ -104,7 +142,9 @@ class UserProfile {
       'role': role.value,
       'status': status.value,
       'district_id': districtId,
+      'district_name': districtName,
       'assembly_id': assemblyId,
+      'ministry_name': ministryName,
       'avatar_url': avatarUrl,
       'data_consent_accepted': dataConsentAccepted,
       'created_at': createdAt.toIso8601String(),

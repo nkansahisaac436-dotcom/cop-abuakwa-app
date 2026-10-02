@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_dimensions.dart';
+import '../../../../core/models/media_attachment.dart';
 import '../../../../core/widgets/app_text_field.dart';
+import '../../../../core/widgets/media_picker.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../districts/domain/models/assembly_model.dart';
@@ -35,6 +37,7 @@ class _AddEditProjectScreenState extends ConsumerState<AddEditProjectScreen> {
   DistrictModel? _selectedDistrict;
   AssemblyModel? _selectedAssembly;
   bool _isLoading = false;
+  List<MediaAttachment> _attachments = [];
 
   @override
   void initState() {
@@ -48,6 +51,13 @@ class _AddEditProjectScreenState extends ConsumerState<AddEditProjectScreen> {
     _status = p?.status ?? ProjectStatus.planned;
     _visibility = p?.visibility ?? VisibilityLevel.members;
     _progressPct = p?.progressPct ?? 0;
+    if (p?.photoUrls != null && p!.photoUrls.isNotEmpty) {
+      _attachments = p.photoUrls
+          .asMap()
+          .entries
+          .map((e) => MediaAttachment(id: 'existing-${e.key}', url: e.value, sortOrder: e.key))
+          .toList();
+    }
   }
 
   @override
@@ -73,7 +83,7 @@ class _AddEditProjectScreenState extends ConsumerState<AddEditProjectScreen> {
       final project = ProjectModel(
         id: widget.existingProject?.id ?? 'proj-${DateTime.now().millisecondsSinceEpoch}',
         districtId: districtId,
-        districtName: _selectedDistrict?.name ?? 'District',
+        districtName: _selectedDistrict?.name ?? user?.districtName ?? 'District',
         assemblyId: _selectedAssembly?.id,
         assemblyName: _selectedAssembly?.name ?? 'Assembly',
         title: _titleController.text.trim(),
@@ -86,13 +96,22 @@ class _AddEditProjectScreenState extends ConsumerState<AddEditProjectScreen> {
         visibility: _visibility,
         createdBy: user?.id,
         authorName: user?.fullName,
+        authorAvatarUrl: user?.avatarUrl,
+        photoUrls: widget.existingProject?.photoUrls ?? [],
         createdAt: widget.existingProject?.createdAt ?? DateTime.now(),
       );
+
+      final newBytes = _attachments.where((a) => a.bytes != null).map((a) => a.bytes!).toList();
+      final captions = _attachments.where((a) => a.bytes != null).map((a) => a.caption ?? '').toList();
 
       if (widget.existingProject != null) {
         await ref.read(projectsListProvider.notifier).updateProject(project);
       } else {
-        await ref.read(projectsListProvider.notifier).addProject(project);
+        await ref.read(projectsListProvider.notifier).addProject(
+          project,
+          mediaBytes: newBytes,
+          captions: captions,
+        );
       }
 
       if (mounted) {
@@ -235,6 +254,18 @@ class _AddEditProjectScreenState extends ConsumerState<AddEditProjectScreen> {
                   controller: _descController,
                   maxLines: 4,
                   validator: (v) => v == null || v.trim().isEmpty ? 'Please enter description' : null,
+                ),
+                const SizedBox(height: 16),
+
+                // Media Picker (Photos)
+                MediaPicker(
+                  initialMedia: _attachments,
+                  maxImages: 5,
+                  onMediaChanged: (list) {
+                    setState(() {
+                      _attachments = list;
+                    });
+                  },
                 ),
                 const SizedBox(height: 16),
 

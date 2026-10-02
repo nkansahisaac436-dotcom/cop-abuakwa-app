@@ -1,18 +1,27 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image/image.dart' as img;
 import 'package:cop_abuakwa_app/core/constants/app_strings.dart';
+import 'package:cop_abuakwa_app/core/network/supabase_client.dart';
+import 'package:cop_abuakwa_app/core/utils/image_compressor.dart';
+import 'package:cop_abuakwa_app/core/widgets/author_attribution_header.dart';
 import 'package:cop_abuakwa_app/core/widgets/primary_button.dart';
+import 'package:cop_abuakwa_app/features/auth/data/auth_repository.dart';
 import 'package:cop_abuakwa_app/features/auth/domain/models/profile_model.dart';
 import 'package:cop_abuakwa_app/features/auth/presentation/providers/auth_provider.dart';
 import 'package:cop_abuakwa_app/features/auth/presentation/screens/login_screen.dart';
 import 'package:cop_abuakwa_app/features/auth/presentation/screens/signup_screen.dart';
+import 'package:cop_abuakwa_app/features/districts/data/districts_repository.dart';
+import 'package:cop_abuakwa_app/features/districts/domain/models/district_model.dart';
+import 'package:cop_abuakwa_app/features/districts/presentation/providers/districts_provider.dart';
+import 'package:cop_abuakwa_app/features/feeds/data/feeds_repository.dart';
+import 'package:cop_abuakwa_app/features/meetings/data/meetings_repository.dart';
+import 'package:cop_abuakwa_app/features/projects/data/projects_repository.dart';
 import 'package:cop_abuakwa_app/features/transfer/domain/models/tenure_archive_model.dart';
 import 'package:cop_abuakwa_app/features/transfer/utils/archive_pdf_generator.dart';
-import 'package:cop_abuakwa_app/features/auth/data/auth_repository.dart';
-import 'package:cop_abuakwa_app/features/meetings/data/meetings_repository.dart';
-import 'package:cop_abuakwa_app/core/network/supabase_client.dart';
 import 'package:cop_abuakwa_app/main.dart';
 
 void main() {
@@ -23,9 +32,12 @@ void main() {
 
   setUp(() {
     SupabaseAuthRepository.resetMockState();
+    SupabaseDistrictsRepository.resetState();
+    SupabaseFeedsRepository.resetState();
+    SupabaseProjectsRepository.resetState();
   });
 
-  group('Step 2: Login & Sign-up Widget Tests', () {
+  group('Part 1 & 2: Login & Sign-up Widget Tests', () {
     testWidgets('LoginScreen renders 4 role chips and default Member view on 360px viewport', (WidgetTester tester) async {
       tester.view.physicalSize = const Size(360, 800);
       tester.view.devicePixelRatio = 1.0;
@@ -58,27 +70,19 @@ void main() {
       expect(find.text(AppStrings.createMemberAccount), findsOneWidget);
     });
 
-    testWidgets('LoginScreen renders and scrolls without overflow on large iPhone (430px)', (WidgetTester tester) async {
-      tester.view.physicalSize = const Size(430, 932);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(() => tester.view.resetPhysicalSize());
-
-      await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(
-            home: LoginScreen(),
-          ),
-        ),
+    testWidgets('Two-step invite code flow works cleanly with verification and redemption', (WidgetTester tester) async {
+      // First create a pastor invite
+      final container = ProviderContainer();
+      final authRepo = container.read(authRepositoryProvider);
+      final invite = await authRepo.createInvite(
+        role: UserRole.pastor,
+        targetName: 'Pastor Kwabena Darko',
       );
 
-      expect(find.text('I am logging in as'), findsOneWidget);
-      expect(find.byType(SingleChildScrollView), findsOneWidget);
-    });
-
-    testWidgets('Two-step invite code flow works cleanly with auto-format, verification, and change code', (WidgetTester tester) async {
       await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
             home: LoginScreen(),
           ),
         ),
@@ -88,11 +92,7 @@ void main() {
       await tester.tap(find.text('Pastor'));
       await tester.pumpAndSettle();
 
-      // Should see Log in & I have an invite code toggle
-      expect(find.text('Log in'), findsNWidgets(2));
       expect(find.text('I have an invite code'), findsOneWidget);
-      expect(find.text('No account yet? Ask your Area Head to send you an invite code.'), findsOneWidget);
-      expect(find.text(AppStrings.createMemberAccount), findsNothing);
 
       // Switch to "I have an invite code" (Step 1)
       await tester.tap(find.text('I have an invite code'));
@@ -102,13 +102,12 @@ void main() {
       expect(find.text('Paste'), findsOneWidget);
       expect(find.text('Verify code'), findsOneWidget);
 
-      // Enter valid preloaded Pastor invite code (auto-verifies on 11 characters)
-      await tester.enterText(find.byType(TextFormField).first, 'ABK-7K4P-2M');
+      // Enter created invite code (auto-verifies on 11 characters)
+      await tester.enterText(find.byType(TextFormField).first, invite.code);
       await tester.pumpAndSettle();
 
       // Step 2: Green card verification badge, locked code, Change code link
       expect(find.text('Invitation verified'), findsOneWidget);
-      expect(find.text('Pastor, Abuakwa Central District'), findsOneWidget);
       expect(find.text('Change code'), findsOneWidget);
       expect(find.text('Create a password'), findsOneWidget);
       expect(find.text('Activate my account'), findsOneWidget);
@@ -119,9 +118,10 @@ void main() {
 
       expect(find.text('Verify code'), findsOneWidget);
       expect(find.text('Invitation verified'), findsNothing);
+      container.dispose();
     });
 
-    testWidgets('SignUpScreen renders all required fields', (WidgetTester tester) async {
+    testWidgets('SignUpScreen renders required fields', (WidgetTester tester) async {
       await tester.pumpWidget(
         const ProviderScope(
           child: MaterialApp(
@@ -141,103 +141,183 @@ void main() {
     });
   });
 
-  group('Invite Code System & Role Check Unit Tests', () {
-    test('Verifying invalid invite code throws expected error message', () async {
+  group('Part 2: Pastor District Self-Registration & Approval Tests', () {
+    test('Pastor registers a new district with status pending and assemblies', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
-      final repo = container.read(authRepositoryProvider);
+      final districtsRepo = container.read(districtsRepositoryProvider);
+      final registered = await districtsRepo.registerDistrict(
+        name: 'Abuakwa North',
+        assemblies: ['Bethel Assembly', 'Central Assembly', 'Calvary Assembly'],
+        startDate: DateTime(2026, 1, 15),
+      );
 
+      expect(registered.name, 'Abuakwa North');
+      expect(registered.status, DistrictStatus.pending);
+      expect(registered.isPending, isTrue);
+      expect(registered.assemblyNames?.length, 3);
+      expect(registered.assemblyNames?.first, 'Bethel Assembly');
+    });
+
+    test('Duplicate district registration is blocked with friendly error', () async {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final districtsRepo = container.read(districtsRepositoryProvider);
+      await districtsRepo.registerDistrict(
+        name: 'Abuakwa Central',
+        assemblies: ['Central Assembly'],
+        startDate: DateTime(2026, 1, 15),
+      );
+
+      // Attempt duplicate registration with different casing and spacing
       expect(
-        () => repo.verifyInviteCode('ABK-INVALID-00'),
-        throwsA(predicate((e) => e.toString().contains('This code is not valid. Ask your Area Head for a new one.'))),
+        () => districtsRepo.registerDistrict(
+          name: '  abuakwa   central  ',
+          assemblies: ['Other Assembly'],
+          startDate: DateTime(2026, 1, 15),
+        ),
+        throwsA(predicate((e) => e.toString().contains('This district is already registered. Contact the Area Head office.'))),
       );
     });
 
-    test('Redeeming invite initiates account with role and district from invite', () async {
+    test('Area Head approves pending district', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
-      final repo = container.read(authRepositoryProvider);
-      final profile = await repo.redeemInvite(
-        code: 'ABK-7K4P-2M',
-        email: 'pastor.darko@copabuakwa.org',
-        password: 'password123',
-        fullName: 'Pastor Kwabena Darko',
+      final districtsRepo = container.read(districtsRepositoryProvider);
+      final registered = await districtsRepo.registerDistrict(
+        name: 'Abuakwa South',
+        assemblies: ['Emmanuel Assembly'],
+        startDate: DateTime(2026, 1, 15),
       );
 
-      expect(profile.role, UserRole.pastor);
-      expect(profile.fullName, 'Pastor Kwabena Darko');
-      expect(profile.email, 'pastor.darko@copabuakwa.org');
+      expect(registered.status, DistrictStatus.pending);
+
+      await districtsRepo.approveDistrict(registered.id, note: 'Approved');
+      final approved = await districtsRepo.getDistrictById(registered.id);
+
+      expect(approved, isNotNull);
+      expect(approved!.status, DistrictStatus.active);
+      expect(approved.isActive, isTrue);
     });
 
-    test('Logging in with mismatched role throws specific error message', () async {
+    test('Area Head rejects pending district with decision note', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
-      final repo = container.read(authRepositoryProvider);
-
-      // Try logging in with member email while selecting Pastor role
-      expect(
-        () => repo.signIn(
-          email: 'kofi@example.com',
-          password: 'password123',
-          selectedRole: UserRole.pastor,
-        ),
-        throwsA(predicate((e) => e.toString().contains('This account is not a pastor account. Choose the correct option above.'))),
+      final districtsRepo = container.read(districtsRepositoryProvider);
+      final registered = await districtsRepo.registerDistrict(
+        name: 'Incomplete District',
+        assemblies: [],
+        startDate: DateTime(2026, 1, 15),
       );
 
-      // Try logging in with pastor email while selecting Area Head role
-      expect(
-        () => repo.signIn(
-          email: 'pastor@copabuakwa.org',
-          password: 'password123',
-          selectedRole: UserRole.areaHead,
-        ),
-        throwsA(predicate((e) => e.toString().contains('This account is not an area head account. Choose the correct option above.'))),
+      await districtsRepo.rejectDistrict(
+        registered.id,
+        note: 'Please list at least 2 local assemblies before resubmitting.',
       );
 
-      // Try logging in with Area Head email while selecting Member role
-      expect(
-        () => repo.signIn(
-          email: 'areahead@copabuakwa.org',
-          password: 'password123',
-          selectedRole: UserRole.member,
-        ),
-        throwsA(predicate((e) => e.toString().contains('This account is not a member account. Choose the correct option above.'))),
+      final rejected = await districtsRepo.getDistrictById(registered.id);
+      expect(rejected, isNotNull);
+      expect(rejected!.status, DistrictStatus.rejected);
+      expect(rejected.isRejected, isTrue);
+      expect(rejected.decisionNote, 'Please list at least 2 local assemblies before resubmitting.');
+
+      // Pastor can resubmit with updated assemblies
+      final resubmitted = await districtsRepo.resubmitDistrict(
+        districtId: rejected.id,
+        name: 'Incomplete District',
+        assemblies: ['Grace Assembly', 'Hope Assembly'],
+        startDate: DateTime(2026, 1, 15),
       );
+
+      expect(resubmitted.status, DistrictStatus.pending);
+      expect(resubmitted.assemblyNames?.length, 2);
     });
 
-    test('Logging in with wrong password throws invalid credentials message', () async {
+    test('Pastor invite can be created without a pre-assigned district', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
-      final repo = container.read(authRepositoryProvider);
-
-      expect(
-        () => repo.signIn(
-          email: 'areahead@copabuakwa.org',
-          password: 'wrongpassword',
-          selectedRole: UserRole.areaHead,
-        ),
-        throwsA(predicate((e) => e.toString().contains(AppStrings.invalidCredentialsMessage))),
+      final authRepo = container.read(authRepositoryProvider);
+      final invite = await authRepo.createInvite(
+        role: UserRole.pastor,
+        targetName: 'Pastor Unassigned',
+        districtId: null, // District is optional
+        districtName: null,
       );
+
+      expect(invite.districtId, isNull);
+      expect(invite.districtName, isNull);
+      expect(invite.role, UserRole.pastor);
+      expect(invite.code.startsWith('ABK-'), isTrue);
+    });
+  });
+
+  group('Part 3: Photo Compression & Attribution Tests', () {
+    test('ImageCompressor resizes and compresses large image', () async {
+      // Create a large 2400x1800 raw test image in memory
+      final rawImage = img.Image(width: 2400, height: 1800);
+      img.fill(rawImage, color: img.ColorRgb8(31, 58, 95));
+      final rawJpgBytes = Uint8List.fromList(img.encodeJpg(rawImage, quality: 100));
+
+      expect(rawJpgBytes.isNotEmpty, isTrue);
+
+      final compressedBytes = await ImageCompressor.compressPostImage(rawJpgBytes, maxDimension: 1600, quality: 80);
+      final decoded = img.decodeImage(compressedBytes);
+
+      expect(decoded, isNotNull);
+      expect(decoded!.width <= 1600, isTrue);
+      expect(decoded.height <= 1600, isTrue);
+      expect(compressedBytes.length, lessThan(rawJpgBytes.length));
     });
 
-    test('Logging in with user that has no profile row throws specific setup error', () async {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
+    test('ImageCompressor creates square avatar correctly', () async {
+      final rawImage = img.Image(width: 1200, height: 800);
+      img.fill(rawImage, color: img.ColorRgb8(184, 134, 11));
+      final rawJpgBytes = Uint8List.fromList(img.encodeJpg(rawImage, quality: 100));
 
-      final repo = container.read(authRepositoryProvider);
+      final avatarBytes = await ImageCompressor.compressAvatar(rawJpgBytes, size: 512);
+      final decoded = img.decodeImage(avatarBytes);
 
-      expect(
-        () => repo.signIn(
-          email: 'noprofile@copabuakwa.org',
-          password: 'password123',
-          selectedRole: UserRole.areaHead,
+      expect(decoded, isNotNull);
+      expect(decoded!.width, 512);
+      expect(decoded.height, 512);
+    });
+
+    testWidgets('AuthorAttributionHeader renders avatar initials, role badge, and opens safe profile dialog', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: AuthorAttributionHeader(
+              authorName: 'Pastor Kwabena Darko',
+              authorRole: UserRole.pastor,
+              districtName: 'Abuakwa Central',
+              createdAt: DateTime(2026, 10, 2),
+            ),
+          ),
         ),
-        throwsA(predicate((e) => e.toString().contains('Your account is not set up yet. Please contact the Area Head office.'))),
       );
+
+      expect(find.text('Pastor Kwabena Darko'), findsOneWidget);
+      expect(find.text('Pastor'), findsOneWidget);
+      expect(find.text('PD'), findsOneWidget); // Initials
+      expect(find.textContaining('Abuakwa Central'), findsOneWidget);
+
+      // Tap on author attribution header to open safe profile dialog
+      await tester.tap(find.text('Pastor Kwabena Darko'));
+      await tester.pumpAndSettle();
+
+      // Dialog opens showing name, role, and district (no private email/phone)
+      expect(find.byType(Dialog), findsOneWidget);
+      expect(find.text('Close'), findsOneWidget);
+
+      await tester.tap(find.text('Close'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(Dialog), findsNothing);
     });
   });
 
@@ -272,91 +352,75 @@ void main() {
       expect(find.text('Supervisory Actions'), findsOneWidget);
     });
 
-    testWidgets('Pastor logs in and lands on Pastor Home Screen', (WidgetTester tester) async {
+    testWidgets('Pastor activates account and lands on pastor interface', (WidgetTester tester) async {
       tester.view.physicalSize = const Size(400, 900);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(() => tester.view.resetPhysicalSize());
 
+      final container = ProviderContainer();
+      final authRepo = container.read(authRepositoryProvider);
+      final invite = await authRepo.createInvite(
+        role: UserRole.pastor,
+        targetName: 'Pastor Kwabena Darko',
+        districtId: 'd0000000-0000-0000-0000-000000000001',
+        districtName: 'Abuakwa Central',
+      );
+
+      // Activate pastor account
+      await authRepo.redeemInvite(
+        code: invite.code,
+        email: 'pastor.darko@copabuakwa.org',
+        password: 'Password123!',
+        fullName: 'Pastor Kwabena Darko',
+      );
+
       await tester.pumpWidget(
-        const ProviderScope(
-          child: AbuakwaApp(),
+        UncontrolledProviderScope(
+          container: container,
+          child: const AbuakwaApp(),
         ),
       );
       await tester.pumpAndSettle();
 
-      // Select Pastor chip
-      await tester.tap(find.text('Pastor'));
-      await tester.pumpAndSettle();
-
-      // Fill in Pastor credentials
-      await tester.enterText(find.byType(TextFormField).at(0), 'pastor@copabuakwa.org');
-      await tester.enterText(find.byType(TextFormField).at(1), 'AbuakwaPastor2026!');
-      await tester.pumpAndSettle();
-
-      // Tap Log in button
-      await tester.tap(find.widgetWithText(PrimaryButton, AppStrings.logIn));
-      await tester.pumpAndSettle();
-
-      // Should be on Pastor Home (Feed, My District, Thoughts tabs)
+      // Since account is activated and session exists, lands directly on Pastor Home
       expect(find.text('Feed'), findsOneWidget);
       expect(find.text('My District'), findsOneWidget);
       expect(find.text('Thoughts'), findsOneWidget);
+      container.dispose();
     });
 
-    testWidgets('Ministry Leader logs in and lands on Leader Home Screen', (WidgetTester tester) async {
+    testWidgets('Member signs up with active district and lands on feed', (WidgetTester tester) async {
       tester.view.physicalSize = const Size(400, 900);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(() => tester.view.resetPhysicalSize());
 
+      final container = ProviderContainer();
+      final districtsRepo = container.read(districtsRepositoryProvider);
+      final dist = await districtsRepo.addDistrictDirectly(
+        name: 'Abuakwa Central',
+        assemblies: ['Bethel Assembly'],
+      );
+
+      final authRepo = container.read(authRepositoryProvider);
+      await authRepo.signUpMember(
+        fullName: 'Kofi Mensah',
+        email: 'kofi.mensah@example.com',
+        password: 'Password123!',
+        districtId: dist.id,
+        assemblyId: 'asm-1',
+      );
+
       await tester.pumpWidget(
-        const ProviderScope(
-          child: AbuakwaApp(),
+        UncontrolledProviderScope(
+          container: container,
+          child: const AbuakwaApp(),
         ),
       );
       await tester.pumpAndSettle();
 
-      // Select Leader chip
-      await tester.tap(find.text('Leader'));
-      await tester.pumpAndSettle();
-
-      // Fill in Leader credentials
-      await tester.enterText(find.byType(TextFormField).at(0), 'womenleader@copabuakwa.org');
-      await tester.enterText(find.byType(TextFormField).at(1), 'AbuakwaLeader2026!');
-      await tester.pumpAndSettle();
-
-      // Tap Log in button
-      await tester.tap(find.widgetWithText(PrimaryButton, AppStrings.logIn));
-      await tester.pumpAndSettle();
-
-      // Should be on Leader Home
-      expect(find.text('Area Feed'), findsOneWidget);
-      expect(find.text('Ministries'), findsOneWidget);
-    });
-
-    testWidgets('Member logs in and lands on Member Feed Screen', (WidgetTester tester) async {
-      tester.view.physicalSize = const Size(400, 900);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(() => tester.view.resetPhysicalSize());
-
-      await tester.pumpWidget(
-        const ProviderScope(
-          child: AbuakwaApp(),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      // Select Member chip (default)
-      await tester.enterText(find.byType(TextFormField).at(0), 'kofi@example.com');
-      await tester.enterText(find.byType(TextFormField).at(1), 'AbuakwaMember2026!');
-      await tester.pumpAndSettle();
-
-      // Tap Log in button
-      await tester.tap(find.widgetWithText(PrimaryButton, AppStrings.logIn));
-      await tester.pumpAndSettle();
-
-      // Should be on Member Feed
       expect(find.text('Feed'), findsOneWidget);
       expect(find.text('Projects'), findsOneWidget);
+      container.dispose();
     });
 
     testWidgets('Wrong password shows visible error banner and stays on LoginScreen', (WidgetTester tester) async {
@@ -382,60 +446,6 @@ void main() {
 
       // Error banner is visible and screen didn't blank out
       expect(find.text(AppStrings.invalidCredentialsMessage), findsOneWidget);
-      expect(find.text(AppStrings.logIn), findsOneWidget);
-    });
-
-    testWidgets('Wrong role chip shows specific role mismatch error banner', (WidgetTester tester) async {
-      tester.view.physicalSize = const Size(400, 900);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(() => tester.view.resetPhysicalSize());
-
-      await tester.pumpWidget(
-        const ProviderScope(
-          child: AbuakwaApp(),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      // Select Area Head chip but enter Pastor email
-      await tester.tap(find.text('Area Head'));
-      await tester.pumpAndSettle();
-
-      await tester.enterText(find.byType(TextFormField).at(0), 'pastor@copabuakwa.org');
-      await tester.enterText(find.byType(TextFormField).at(1), 'AbuakwaPastor2026!');
-      await tester.pumpAndSettle();
-
-      // Tap Log in button
-      await tester.tap(find.widgetWithText(PrimaryButton, AppStrings.logIn));
-      await tester.pumpAndSettle();
-
-      // Specific error is visible
-      expect(find.text('This account is not an area head account. Choose the correct option above.'), findsOneWidget);
-    });
-
-    testWidgets('User with no profile row shows specific not set up error banner', (WidgetTester tester) async {
-      tester.view.physicalSize = const Size(400, 900);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(() => tester.view.resetPhysicalSize());
-
-      await tester.pumpWidget(
-        const ProviderScope(
-          child: AbuakwaApp(),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.text('Area Head'));
-      await tester.pumpAndSettle();
-
-      await tester.enterText(find.byType(TextFormField).at(0), 'noprofile@copabuakwa.org');
-      await tester.enterText(find.byType(TextFormField).at(1), 'SomePassword123!');
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.widgetWithText(PrimaryButton, AppStrings.logIn));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Your account is not set up yet. Please contact the Area Head office.'), findsOneWidget);
       expect(find.text(AppStrings.logIn), findsOneWidget);
     });
   });

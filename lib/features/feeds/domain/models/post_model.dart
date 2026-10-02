@@ -33,6 +33,7 @@ class PostModel {
   final String authorId;
   final String? authorName;
   final String? authorRole;
+  final String? authorAvatarUrl;
   final PostType type;
   final String title;
   final String body;
@@ -51,6 +52,7 @@ class PostModel {
     required this.authorId,
     this.authorName,
     this.authorRole,
+    this.authorAvatarUrl,
     this.type = PostType.news,
     required this.title,
     required this.body,
@@ -74,6 +76,7 @@ class PostModel {
       authorId: json['author_id'] as String,
       authorName: json['author_name'] as String?,
       authorRole: json['author_role'] as String?,
+      authorAvatarUrl: json['author_avatar_url'] as String?,
       type: PostType.fromString(json['type'] as String?),
       title: json['title'] as String? ?? '',
       body: json['body'] as String? ?? '',

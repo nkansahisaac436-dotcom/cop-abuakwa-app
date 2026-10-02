@@ -39,8 +39,8 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
     super.dispose();
   }
 
-  bool get _isDistrictInactive =>
-      _selectedDistrict != null && _selectedDistrict!.isInactive;
+  bool get _isDistrictPendingOrInactive =>
+      _selectedDistrict != null && (_selectedDistrict!.isPending || _selectedDistrict!.isInactive);
 
   bool get _isFormInteractable =>
       _selectedDistrict != null && _selectedDistrict!.isActive;
@@ -57,10 +57,10 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
       return;
     }
 
-    if (_isDistrictInactive) {
+    if (_isDistrictPendingOrInactive) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(AppStrings.districtInactiveBlockedToast),
+          content: Text('Your district has not been approved yet. Please try again later.'),
           backgroundColor: AppColors.error,
         ),
       );
@@ -116,7 +116,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   @override
   Widget build(BuildContext context) {
     final districtsAsync = ref.watch(districtsListProvider);
-    final assembliesAsync = _selectedDistrict != null
+    final assembliesAsync = (_selectedDistrict != null && _selectedDistrict!.isActive)
         ? ref.watch(assembliesForDistrictProvider(_selectedDistrict!.id))
         : const AsyncValue.data(<AssemblyModel>[]);
 
@@ -264,15 +264,34 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                             'Error loading districts: $err',
                             style: const TextStyle(color: AppColors.error),
                           ),
-                          data: (districts) {
+                          data: (allDistricts) {
+                            // Filter out rejected districts
+                            final visibleDistricts = allDistricts.where((d) => !d.isRejected).toList();
+
+                            if (visibleDistricts.isEmpty) {
+                              return Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(14),
+                                decoration: BoxDecoration(
+                                  color: AppColors.disabled,
+                                  borderRadius: AppDimensions.inputBorderRadius,
+                                  border: Border.all(color: AppColors.border),
+                                ),
+                                child: const Text(
+                                  'No districts are available yet. Please check again soon.',
+                                  style: TextStyle(color: AppColors.softGrey, fontSize: 13),
+                                ),
+                              );
+                            }
+
                             return Container(
                               constraints: const BoxConstraints(minHeight: AppDimensions.minTouchTarget),
                               decoration: BoxDecoration(
                                 color: AppColors.white,
                                 borderRadius: AppDimensions.inputBorderRadius,
                                 border: Border.all(
-                                  color: _isDistrictInactive ? AppColors.error : AppColors.border,
-                                  width: _isDistrictInactive ? 1.8 : 1.2,
+                                  color: _isDistrictPendingOrInactive ? AppColors.error : AppColors.border,
+                                  width: _isDistrictPendingOrInactive ? 1.8 : 1.2,
                                 ),
                               ),
                               padding: const EdgeInsets.symmetric(horizontal: 14),
@@ -294,23 +313,28 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                                     ],
                                   ),
                                   icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.navy),
-                                  items: districts.map((district) {
+                                  items: visibleDistricts.map((district) {
+                                    final isPending = district.isPending || district.isInactive;
                                     return DropdownMenuItem<DistrictModel>(
                                       value: district,
                                       child: Row(
                                         children: [
-                                          const Icon(Icons.location_on_outlined, color: AppColors.navy, size: 20),
+                                          Icon(
+                                            Icons.location_on_outlined,
+                                            color: isPending ? AppColors.softGrey : AppColors.navy,
+                                            size: 20,
+                                          ),
                                           const SizedBox(width: 8),
                                           Expanded(
                                             child: Text(
                                               district.name,
                                               style: GoogleFonts.nunitoSans(
                                                 fontSize: AppDimensions.fontSizeInput,
-                                                color: AppColors.text,
+                                                color: isPending ? AppColors.softGrey : AppColors.text,
                                               ),
                                             ),
                                           ),
-                                          if (district.isInactive)
+                                          if (isPending)
                                             Container(
                                               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                               decoration: BoxDecoration(
@@ -318,9 +342,9 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                                                 borderRadius: BorderRadius.circular(6),
                                                 border: Border.all(color: AppColors.warningBorder),
                                               ),
-                                              child: Text(
-                                                'Pending',
-                                                style: GoogleFonts.nunitoSans(
+                                              child: const Text(
+                                                'Awaiting approval',
+                                                style: TextStyle(
                                                   fontSize: 10,
                                                   fontWeight: FontWeight.bold,
                                                   color: AppColors.warningText,
@@ -337,6 +361,15 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                                       _selectedAssembly = null;
                                       _errorMessage = null;
                                     });
+
+                                    if (value != null && (value.isPending || value.isInactive)) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text('Your district has not been approved yet. Please try again later.'),
+                                          backgroundColor: AppColors.warningText,
+                                        ),
+                                      );
+                                    }
                                   },
                                 ),
                               ),
@@ -344,18 +377,18 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                           },
                         ),
 
-                        // Inactive District Warning Banner (Matches Design Image 2)
-                        if (_isDistrictInactive) ...[
+                        // Inactive/Pending District Warning Banner
+                        if (_isDistrictPendingOrInactive) ...[
                           const SizedBox(height: 14),
                           const WarningBanner(
-                            title: AppStrings.districtNotApprovedTitle,
-                            message: AppStrings.districtNotApprovedMessage,
+                            title: 'District not approved yet',
+                            message: 'Your district has not been approved yet. Please try again later.',
                           ),
                         ],
 
                         const SizedBox(height: 16),
 
-                        // Assembly Dropdown (Disabled if District is Inactive or Unselected)
+                        // Assembly Dropdown (Disabled if District is Inactive/Pending or Unselected)
                         Text(
                           AppStrings.assembly,
                           style: GoogleFonts.nunitoSans(

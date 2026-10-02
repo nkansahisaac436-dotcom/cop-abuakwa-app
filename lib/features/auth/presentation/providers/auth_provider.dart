@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/auth_repository.dart';
 import '../../domain/models/profile_model.dart';
@@ -81,6 +82,28 @@ class AuthNotifier extends AsyncNotifier<UserProfile?> {
       state = const AsyncValue.data(null);
       rethrow;
     }
+  }
+
+  Future<void> uploadAvatar(Uint8List imageBytes) async {
+    final repo = ref.read(authRepositoryProvider);
+    final updated = await repo.uploadAvatar(imageBytes);
+    state = AsyncValue.data(updated);
+  }
+
+  Future<void> updateProfile({String? fullName, String? phone, String? avatarUrl}) async {
+    final repo = ref.read(authRepositoryProvider);
+    final updated = await repo.updateProfile(fullName: fullName, phone: phone, avatarUrl: avatarUrl);
+    state = AsyncValue.data(updated);
+  }
+
+  Future<void> changePassword(String newPassword) async {
+    final repo = ref.read(authRepositoryProvider);
+    await repo.changePassword(newPassword);
+  }
+
+  Future<void> refreshProfile() async {
+    final repo = ref.read(authRepositoryProvider);
+    state = AsyncValue.data(await repo.getCurrentProfile());
   }
 
   Future<void> signOut() async {

@@ -8,7 +8,10 @@ import '../../features/auth/presentation/screens/invite_pastor_screen.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/signup_screen.dart';
 import '../../features/districts/presentation/screens/districts_activation_screen.dart';
+import '../../features/districts/presentation/screens/register_district_screen.dart';
+import '../../features/districts/presentation/screens/waiting_approval_screen.dart';
 import '../../features/notifications/presentation/screens/notifications_screen.dart';
+import '../../features/profile/presentation/screens/profile_screen.dart';
 import '../../features/projects/presentation/screens/area_head_projects_map_screen.dart';
 import '../../features/supervision/presentation/screens/supervision_visits_screen.dart';
 import '../../features/transfer/presentation/screens/transfer_archive_screen.dart';
@@ -66,6 +69,20 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const HomeShellScreen(initialRole: UserRole.pastor),
       ),
       GoRoute(
+        path: '/pastor',
+        redirect: (context, state) => '/pastor-home',
+      ),
+      GoRoute(
+        path: '/pastor/register-district',
+        name: 'register_district',
+        builder: (context, state) => const RegisterDistrictScreen(),
+      ),
+      GoRoute(
+        path: '/pastor/waiting-approval',
+        name: 'waiting_approval',
+        builder: (context, state) => const WaitingApprovalScreen(),
+      ),
+      GoRoute(
         path: '/leader-home',
         name: 'leader_home',
         builder: (context, state) => const HomeShellScreen(initialRole: UserRole.ministryLeader),
@@ -74,6 +91,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/feed',
         name: 'member_feed',
         builder: (context, state) => const HomeShellScreen(initialRole: UserRole.member),
+      ),
+      GoRoute(
+        path: '/profile',
+        name: 'profile',
+        builder: (context, state) => const ProfileScreen(),
       ),
       GoRoute(
         path: '/invites',

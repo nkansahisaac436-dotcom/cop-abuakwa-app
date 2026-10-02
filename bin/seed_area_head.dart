@@ -28,8 +28,14 @@ Future<void> main() async {
   final supabaseUrl = env['SUPABASE_URL'] ?? '';
   final serviceRoleKey = env['SUPABASE_SERVICE_ROLE_KEY'] ?? '';
   final email = env['AREA_HEAD_EMAIL'] ?? 'areahead@copabuakwa.org';
-  final password = env['AREA_HEAD_PASSWORD'] ?? 'AbuakwaAreaHead2026!';
+  final password = env['AREA_HEAD_PASSWORD'] ?? '';
   final fullName = env['AREA_HEAD_NAME'] ?? 'Apostle Area Head';
+
+  if (password.isEmpty) {
+    stderr.writeln('[ERROR] AREA_HEAD_PASSWORD is not set in your .env file.');
+    stderr.writeln('Please set AREA_HEAD_PASSWORD in .env before provisioning.');
+    return;
+  }
 
   if (supabaseUrl.isEmpty ||
       serviceRoleKey.isEmpty ||
@@ -39,8 +45,8 @@ Future<void> main() async {
     stdout.writeln('  Email:    $email');
     stdout.writeln('  Name:     $fullName');
     stdout.writeln('  Role:     area_head');
-    stdout.writeln('  Password: $password');
-    stdout.writeln('[SUCCESS] Area Head account definition validated.');
+    stdout.writeln('  Password: [PROTECTED]');
+    stdout.writeln('[SUCCESS] Area Head configuration verified.');
     return;
   }
 

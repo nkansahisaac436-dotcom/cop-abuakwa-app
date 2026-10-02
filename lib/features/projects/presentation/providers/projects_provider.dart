@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cop_abuakwa_app/features/auth/domain/models/profile_model.dart';
 import 'package:cop_abuakwa_app/features/auth/presentation/providers/auth_provider.dart';
@@ -25,9 +26,17 @@ class ProjectsNotifier extends AsyncNotifier<List<ProjectModel>> {
     );
   }
 
-  Future<void> addProject(ProjectModel project) async {
+  Future<void> addProject(
+    ProjectModel project, {
+    List<Uint8List> mediaBytes = const [],
+    List<String> captions = const [],
+  }) async {
     final repo = ref.read(projectsRepositoryProvider);
-    final created = await repo.createProject(project);
+    final created = await repo.createProject(
+      project,
+      mediaBytes: mediaBytes,
+      captions: captions,
+    );
     state = AsyncValue.data([created, ...?state.value]);
   }
 

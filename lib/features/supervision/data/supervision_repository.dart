@@ -24,29 +24,20 @@ class SupabaseSupervisionRepository implements SupervisionRepository {
 
   SupabaseClient get _sb => _client ?? SupabaseConfig.client;
 
-  static final List<VisitModel> _mockVisits = [
-    VisitModel(
-      id: 'vis-1',
-      districtId: 'd0000000-0000-0000-0000-000000000004',
-      districtName: 'Tanoso District',
-      projectId: 'proj-2',
-      projectTitle: 'Youth Chapel Auditorium Expansion',
-      visitedBy: 'mock-area-head-id',
-      visitorName: 'Apostle Area Head',
-      visitDate: DateTime.now().subtract(const Duration(days: 2)),
-      notes: 'Conducted field supervision of the youth chapel project. Contractor on site. Advised pastor on proper auditing of building levy.',
-      visibility: VisibilityLevel.areaHead,
-      createdAt: DateTime.now().subtract(const Duration(days: 2)),
-    ),
-  ];
+  // In-memory runtime storage for offline / mock testing (starts empty)
+  static final List<VisitModel> _inMemoryVisits = [];
+
+  static void resetState() {
+    _inMemoryVisits.clear();
+  }
 
   @override
   Future<List<VisitModel>> getVisits({String? districtId}) async {
     if (!SupabaseConfig.isInitialized) {
       if (districtId != null) {
-        return _mockVisits.where((v) => v.districtId == districtId).toList();
+        return _inMemoryVisits.where((v) => v.districtId == districtId).toList();
       }
-      return List.unmodifiable(_mockVisits);
+      return List.unmodifiable(_inMemoryVisits);
     }
 
     try {
@@ -58,7 +49,7 @@ class SupabaseSupervisionRepository implements SupervisionRepository {
       return (res as List).map((j) => VisitModel.fromJson(j)).toList();
     } catch (e) {
       debugPrint('[SupervisionRepository] Error fetching visits: $e');
-      return _mockVisits;
+      return _inMemoryVisits;
     }
   }
 
@@ -84,7 +75,7 @@ class SupabaseSupervisionRepository implements SupervisionRepository {
       createdAt: DateTime.now(),
     );
 
-    _mockVisits.insert(0, newVisit);
+    _inMemoryVisits.insert(0, newVisit);
 
     if (SupabaseConfig.isInitialized) {
       try {

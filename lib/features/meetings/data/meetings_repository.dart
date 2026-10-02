@@ -31,30 +31,24 @@ class SupabaseMeetingsRepository implements MeetingsRepository {
 
   SupabaseClient get _sb => _client ?? SupabaseConfig.client;
 
-  static final List<MeetingModel> _mockMeetings = [
-    MeetingModel(
-      id: 'meet-1',
-      title: 'Monthly Abuakwa Pastors Fellowship Call',
-      roomLink: 'https://meet.jit.si/Abuakwa_Pastors_Fellowship_2026#config.startWithAudioOnly=true',
-      scheduledAt: DateTime.now().add(const Duration(hours: 3)),
-      audience: UserRole.pastor,
-      createdBy: 'area-head-user',
-      creatorName: 'Apostle Area Head',
-      createdAt: DateTime.now().subtract(const Duration(days: 1)),
-    ),
-  ];
+  // In-memory runtime storage for offline / mock testing (starts empty)
+  static final List<MeetingModel> _inMemoryMeetings = [];
+
+  static void resetState() {
+    _inMemoryMeetings.clear();
+  }
 
   @override
   Future<List<MeetingModel>> getMeetings({required UserRole userRole}) async {
     if (!SupabaseConfig.isInitialized) {
-      return List.unmodifiable(_mockMeetings);
+      return List.unmodifiable(_inMemoryMeetings);
     }
     try {
       final res = await _sb.from('meetings').select().order('scheduled_at', ascending: true);
       return (res as List).map((j) => MeetingModel.fromJson(j)).toList();
     } catch (e) {
       debugPrint('[MeetingsRepository] Error fetching meetings: $e');
-      return _mockMeetings;
+      return _inMemoryMeetings;
     }
   }
 
@@ -81,7 +75,7 @@ class SupabaseMeetingsRepository implements MeetingsRepository {
       createdAt: DateTime.now(),
     );
 
-    _mockMeetings.insert(0, newMeeting);
+    _inMemoryMeetings.insert(0, newMeeting);
 
     if (SupabaseConfig.isInitialized) {
       try {
@@ -117,7 +111,7 @@ class SupabaseMeetingsRepository implements MeetingsRepository {
       createdAt: DateTime.now(),
     );
 
-    _mockMeetings.add(newMeeting);
+    _inMemoryMeetings.add(newMeeting);
 
     if (SupabaseConfig.isInitialized) {
       try {

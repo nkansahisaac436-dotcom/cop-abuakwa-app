@@ -17,29 +17,17 @@ class SupabaseNotificationsRepository implements NotificationsRepository {
 
   SupabaseClient get _sb => _client ?? SupabaseConfig.client;
 
-  static final List<AppNotificationModel> _mockNotifications = [
-    AppNotificationModel(
-      id: 'notif-1',
-      userId: 'mock-pastor-id',
-      title: 'Area Announcements Released',
-      body: 'Apostle Area Head posted the 2026 Half-Year Ministers & Officers Conference schedule.',
-      read: false,
-      createdAt: DateTime.now().subtract(const Duration(hours: 2)),
-    ),
-    AppNotificationModel(
-      id: 'notif-2',
-      userId: 'mock-pastor-id',
-      title: 'Upcoming Fellowship Call',
-      body: 'Monthly Abuakwa Pastors Fellowship Call is scheduled for 3:00 PM today.',
-      read: true,
-      createdAt: DateTime.now().subtract(const Duration(days: 1)),
-    ),
-  ];
+  // In-memory runtime storage for offline / mock testing (starts empty)
+  static final List<AppNotificationModel> _inMemoryNotifications = [];
+
+  static void resetState() {
+    _inMemoryNotifications.clear();
+  }
 
   @override
   Future<List<AppNotificationModel>> getNotifications(String userId) async {
     if (!SupabaseConfig.isInitialized) {
-      return List.unmodifiable(_mockNotifications);
+      return List.unmodifiable(_inMemoryNotifications.where((n) => n.userId == userId).toList());
     }
     try {
       final res = await _sb
@@ -50,15 +38,15 @@ class SupabaseNotificationsRepository implements NotificationsRepository {
       return (res as List).map((j) => AppNotificationModel.fromJson(j)).toList();
     } catch (e) {
       debugPrint('[NotificationsRepository] Error fetching notifications: $e');
-      return _mockNotifications;
+      return _inMemoryNotifications.where((n) => n.userId == userId).toList();
     }
   }
 
   @override
   Future<void> markAsRead(String notificationId) async {
-    final idx = _mockNotifications.indexWhere((n) => n.id == notificationId);
+    final idx = _inMemoryNotifications.indexWhere((n) => n.id == notificationId);
     if (idx != -1) {
-      _mockNotifications[idx] = _mockNotifications[idx].copyWith(read: true);
+      _inMemoryNotifications[idx] = _inMemoryNotifications[idx].copyWith(read: true);
     }
 
     if (SupabaseConfig.isInitialized) {

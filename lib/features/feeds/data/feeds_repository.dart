@@ -11,17 +11,24 @@ abstract class FeedsRepository {
     String? ministryId,
     PostType? postType,
   });
+
   Future<PostModel> createPost({
     required String authorId,
     required String authorName,
     required String authorRole,
+    String? authorAvatarUrl,
     required String title,
     required String body,
     required PostType type,
     required VisibilityLevel visibility,
     String? ministryId,
+    String? ministryName,
     String? districtId,
+    String? districtName,
     String? tenureId,
+    List<String> mediaUrls = const [],
+    List<Uint8List> mediaBytes = const [],
+    List<String> captions = const [],
   });
 }
 
@@ -32,45 +39,12 @@ class SupabaseFeedsRepository implements FeedsRepository {
 
   SupabaseClient get _sb => _client ?? SupabaseConfig.client;
 
-  static final List<PostModel> _mockPosts = [
-    PostModel(
-      id: 'post-1',
-      authorId: 'area-head-user',
-      authorName: 'Apostle Area Head',
-      authorRole: 'area_head',
-      type: PostType.announcement,
-      title: '2026 Abuakwa Area Half-Year Ministers & Officers Conference',
-      body: 'Grace and peace be unto you in Jesus name. The Area Head Office announces the upcoming ministers and officers retreat scheduled for 15th-18th October at the Area Central Auditorium.',
-      visibility: VisibilityLevel.public,
-      createdAt: DateTime.now().subtract(const Duration(hours: 3)),
-    ),
-    PostModel(
-      id: 'post-2',
-      authorId: 'pastor-1',
-      authorName: 'Pastor Enoch Agyemang',
-      authorRole: 'pastor',
-      type: PostType.thought,
-      title: 'Leading with Endurance in Ministry',
-      body: 'Reflecting on 2 Timothy 4:5 this morning. Ministry in our 33 districts requires staying watchful and enduring hardships while fulfilling our sacred calling with joy.',
-      visibility: VisibilityLevel.pastors,
-      districtId: 'd0000000-0000-0000-0000-000000000002',
-      districtName: 'Abuakwa North',
-      createdAt: DateTime.now().subtract(const Duration(hours: 6)),
-    ),
-    PostModel(
-      id: 'post-3',
-      authorId: 'leader-women',
-      authorName: 'Deaconess Mary Mensah',
-      authorRole: 'ministry_leader',
-      type: PostType.news,
-      title: 'Women\'s Ministry Area Outreach at Sepaase',
-      body: 'The Women\'s Ministry held a powerful medical and spiritual outreach at Sepaase District yesterday. Over 250 women and mothers were ministered to with supplies and the gospel.',
-      visibility: VisibilityLevel.public,
-      ministryId: 'a0000000-0000-0000-0000-000000000005',
-      ministryName: 'Women\'s Ministry',
-      createdAt: DateTime.now().subtract(const Duration(days: 1)),
-    ),
-  ];
+  // In-memory runtime storage for offline / mock testing (starts empty)
+  static final List<PostModel> _inMemoryPosts = [];
+
+  static void resetState() {
+    _inMemoryPosts.clear();
+  }
 
   @override
   Future<List<PostModel>> getFeedPosts({
@@ -79,7 +53,7 @@ class SupabaseFeedsRepository implements FeedsRepository {
     PostType? postType,
   }) async {
     if (!SupabaseConfig.isInitialized) {
-      return _mockPosts.where((post) {
+      return _inMemoryPosts.where((post) {
         if (ministryId != null && post.ministryId != ministryId) return false;
         if (postType != null && post.type != postType) return false;
 
@@ -95,7 +69,9 @@ class SupabaseFeedsRepository implements FeedsRepository {
     }
 
     try {
-      var query = _sb.from('posts').select();
+      var query = _sb.from('posts').select(
+        '*, profiles:author_id(full_name, role, avatar_url), ministries(name), districts(name), media(id, url, caption, sort_order)',
+      );
       if (ministryId != null) {
         query = query.eq('ministry_id', ministryId);
       }
@@ -103,10 +79,34 @@ class SupabaseFeedsRepository implements FeedsRepository {
         query = query.eq('type', postType.value);
       }
       final res = await query.order('created_at', ascending: false);
-      return (res as List).map((j) => PostModel.fromJson(j)).toList();
+
+      return (res as List).map((j) {
+        final profile = j['profiles'] as Map<String, dynamic>?;
+        final ministry = j['ministries'] as Map<String, dynamic>?;
+        final district = j['districts'] as Map<String, dynamic>?;
+        final mediaList = j['media'] as List<dynamic>?;
+
+        final map = Map<String, dynamic>.from(j);
+        if (profile != null) {
+          map['author_name'] = profile['full_name'];
+          map['author_role'] = profile['role'];
+          map['author_avatar_url'] = profile['avatar_url'];
+        }
+        if (ministry != null) map['ministry_name'] = ministry['name'];
+        if (district != null) map['district_name'] = district['name'];
+
+        if (mediaList != null && mediaList.isNotEmpty) {
+          map['media_urls'] = mediaList
+              .map((m) => m is Map ? m['url'] : m.toString())
+              .where((u) => u != null && u.toString().isNotEmpty)
+              .toList();
+        }
+
+        return PostModel.fromJson(map);
+      }).toList();
     } catch (e) {
       debugPrint('[FeedsRepository] Error fetching posts: $e');
-      return _mockPosts;
+      return _inMemoryPosts;
     }
   }
 
@@ -115,16 +115,44 @@ class SupabaseFeedsRepository implements FeedsRepository {
     required String authorId,
     required String authorName,
     required String authorRole,
+    String? authorAvatarUrl,
     required String title,
     required String body,
     required PostType type,
     required VisibilityLevel visibility,
     String? ministryId,
+    String? ministryName,
     String? districtId,
+    String? districtName,
     String? tenureId,
+    List<String> mediaUrls = const [],
+    List<Uint8List> mediaBytes = const [],
+    List<String> captions = const [],
   }) async {
+    final postId = 'post-${DateTime.now().millisecondsSinceEpoch}';
+    final uploadedUrls = List<String>.from(mediaUrls);
+
+    // If there are raw bytes to upload to Supabase Storage
+    if (SupabaseConfig.isInitialized && mediaBytes.isNotEmpty) {
+      for (int i = 0; i < mediaBytes.length; i++) {
+        try {
+          final fileName = 'posts/$authorId/${DateTime.now().millisecondsSinceEpoch}_$i.jpg';
+          await _sb.storage.from('post_media').uploadBinary(
+            fileName,
+            mediaBytes[i],
+            fileOptions: const FileOptions(contentType: 'image/jpeg', upsert: true),
+          );
+          // For private bucket, get signed URL or public URL
+          final signedUrlRes = await _sb.storage.from('post_media').createSignedUrl(fileName, 60 * 60 * 24 * 365);
+          uploadedUrls.add(signedUrlRes);
+        } catch (e) {
+          debugPrint('[FeedsRepository] Error uploading post image: $e');
+        }
+      }
+    }
+
     final newPost = PostModel(
-      id: 'post-${DateTime.now().millisecondsSinceEpoch}',
+      id: postId,
       authorId: authorId,
       authorName: authorName,
       authorRole: authorRole,
@@ -133,18 +161,47 @@ class SupabaseFeedsRepository implements FeedsRepository {
       body: body.trim(),
       visibility: visibility,
       ministryId: ministryId,
+      ministryName: ministryName,
       districtId: districtId,
+      districtName: districtName,
       tenureId: tenureId,
+      mediaUrls: uploadedUrls,
       createdAt: DateTime.now(),
     );
 
-    _mockPosts.insert(0, newPost);
+    _inMemoryPosts.insert(0, newPost);
 
     if (SupabaseConfig.isInitialized) {
       try {
-        await _sb.from('posts').insert(newPost.toJson());
+        final inserted = await _sb.from('posts').insert({
+          'author_id': authorId,
+          'type': type.value,
+          'title': title.trim(),
+          'body': body.trim(),
+          'visibility': visibility.value,
+          'ministry_id': ministryId,
+          'district_id': districtId,
+          'tenure_id': tenureId,
+        }).select().single();
+
+        final actualPostId = inserted['id'] as String;
+
+        // Save media table records
+        for (int i = 0; i < uploadedUrls.length; i++) {
+          final cap = i < captions.length ? captions[i] : null;
+          await _sb.from('media').insert({
+            'post_id': actualPostId,
+            'owner_type': 'post',
+            'owner_id': actualPostId,
+            'url': uploadedUrls[i],
+            'caption': cap,
+            'sort_order': i,
+            'created_by': authorId,
+          });
+        }
       } catch (e) {
         debugPrint('[FeedsRepository] Remote insert error: $e');
+        rethrow;
       }
     }
 

@@ -6,7 +6,26 @@ import '../domain/models/district_model.dart';
 
 abstract class DistrictsRepository {
   Future<List<DistrictModel>> getDistricts();
+  Future<List<DistrictModel>> getActiveDistricts();
+  Future<DistrictModel?> getDistrictById(String districtId);
   Future<List<AssemblyModel>> getAssembliesForDistrict(String districtId);
+  Future<DistrictModel> registerDistrict({
+    required String name,
+    required List<String> assemblies,
+    required DateTime startDate,
+  });
+  Future<DistrictModel> resubmitDistrict({
+    required String districtId,
+    required String name,
+    required List<String> assemblies,
+    required DateTime startDate,
+  });
+  Future<void> approveDistrict(String districtId, {String? note});
+  Future<void> rejectDistrict(String districtId, {required String note});
+  Future<DistrictModel> addDistrictDirectly({
+    required String name,
+    required List<String> assemblies,
+  });
   Future<void> activateDistrict(String districtId, String activatedByUserId);
   Future<void> deactivateDistrict(String districtId);
 }
@@ -18,109 +37,333 @@ class SupabaseDistrictsRepository implements DistrictsRepository {
 
   SupabaseClient get _sb => _client ?? SupabaseConfig.client;
 
-  // Local fallback cache for offline or demo use
-  static final List<DistrictModel> _mockDistricts = [
-    DistrictModel(id: 'd0000000-0000-0000-0000-000000000001', name: 'Abuakwa Central', status: DistrictStatus.inactive, createdAt: DateTime(2026, 1, 1)),
-    DistrictModel(id: 'd0000000-0000-0000-0000-000000000002', name: 'Abuakwa North', status: DistrictStatus.active, createdAt: DateTime(2026, 1, 1)),
-    DistrictModel(id: 'd0000000-0000-0000-0000-000000000003', name: 'Abuakwa South', status: DistrictStatus.active, createdAt: DateTime(2026, 1, 1)),
-    DistrictModel(id: 'd0000000-0000-0000-0000-000000000004', name: 'Tanoso', status: DistrictStatus.active, createdAt: DateTime(2026, 1, 1)),
-    DistrictModel(id: 'd0000000-0000-0000-0000-000000000005', name: 'Akropong', status: DistrictStatus.active, createdAt: DateTime(2026, 1, 1)),
-    DistrictModel(id: 'd0000000-0000-0000-0000-000000000006', name: 'Sepaase', status: DistrictStatus.inactive, createdAt: DateTime(2026, 1, 1)),
-    DistrictModel(id: 'd0000000-0000-0000-0000-000000000007', name: 'Nkawie', status: DistrictStatus.inactive, createdAt: DateTime(2026, 1, 1)),
-    DistrictModel(id: 'd0000000-0000-0000-0000-000000000008', name: 'Toase', status: DistrictStatus.inactive, createdAt: DateTime(2026, 1, 1)),
-    DistrictModel(id: 'd0000000-0000-0000-0000-000000000009', name: 'Nyinahini', status: DistrictStatus.inactive, createdAt: DateTime(2026, 1, 1)),
-    DistrictModel(id: 'd0000000-0000-0000-0000-000000000010', name: 'Barekese', status: DistrictStatus.inactive, createdAt: DateTime(2026, 1, 1)),
-    DistrictModel(id: 'd0000000-0000-0000-0000-000000000011', name: 'Asuofua', status: DistrictStatus.inactive, createdAt: DateTime(2026, 1, 1)),
-    DistrictModel(id: 'd0000000-0000-0000-0000-000000000012', name: 'Atwima Koforidua', status: DistrictStatus.inactive, createdAt: DateTime(2026, 1, 1)),
-    DistrictModel(id: 'd0000000-0000-0000-0000-000000000013', name: 'Denkyemuoso', status: DistrictStatus.inactive, createdAt: DateTime(2026, 1, 1)),
-    DistrictModel(id: 'd0000000-0000-0000-0000-000000000014', name: 'Agogo - Abuakwa', status: DistrictStatus.inactive, createdAt: DateTime(2026, 1, 1)),
-    DistrictModel(id: 'd0000000-0000-0000-0000-000000000015', name: 'Nwabiagya East', status: DistrictStatus.inactive, createdAt: DateTime(2026, 1, 1)),
-    DistrictModel(id: 'd0000000-0000-0000-0000-000000000016', name: 'Nwabiagya South', status: DistrictStatus.inactive, createdAt: DateTime(2026, 1, 1)),
-    DistrictModel(id: 'd0000000-0000-0000-0000-000000000017', name: 'Mpasatia', status: DistrictStatus.inactive, createdAt: DateTime(2026, 1, 1)),
-    DistrictModel(id: 'd0000000-0000-0000-0000-000000000018', name: 'Agogo Central', status: DistrictStatus.inactive, createdAt: DateTime(2026, 1, 1)),
-    DistrictModel(id: 'd0000000-0000-0000-0000-000000000019', name: 'Achiase', status: DistrictStatus.inactive, createdAt: DateTime(2026, 1, 1)),
-    DistrictModel(id: 'd0000000-0000-0000-0000-000000000020', name: 'Manhyia - Abuakwa', status: DistrictStatus.inactive, createdAt: DateTime(2026, 1, 1)),
-    DistrictModel(id: 'd0000000-0000-0000-0000-000000000021', name: 'Bokankye', status: DistrictStatus.inactive, createdAt: DateTime(2026, 1, 1)),
-    DistrictModel(id: 'd0000000-0000-0000-0000-000000000022', name: 'Fufuo', status: DistrictStatus.inactive, createdAt: DateTime(2026, 1, 1)),
-    DistrictModel(id: 'd0000000-0000-0000-0000-000000000023', name: 'Amanchia', status: DistrictStatus.inactive, createdAt: DateTime(2026, 1, 1)),
-    DistrictModel(id: 'd0000000-0000-0000-0000-000000000024', name: 'Adankwame', status: DistrictStatus.inactive, createdAt: DateTime(2026, 1, 1)),
-    DistrictModel(id: 'd0000000-0000-0000-0000-000000000025', name: 'Darbaa', status: DistrictStatus.inactive, createdAt: DateTime(2026, 1, 1)),
-    DistrictModel(id: 'd0000000-0000-0000-0000-000000000026', name: 'Adwumakase', status: DistrictStatus.inactive, createdAt: DateTime(2026, 1, 1)),
-    DistrictModel(id: 'd0000000-0000-0000-0000-000000000027', name: 'Asakraka', status: DistrictStatus.inactive, createdAt: DateTime(2026, 1, 1)),
-    DistrictModel(id: 'd0000000-0000-0000-0000-000000000028', name: 'Hiawu Besease', status: DistrictStatus.inactive, createdAt: DateTime(2026, 1, 1)),
-    DistrictModel(id: 'd0000000-0000-0000-0000-000000000029', name: 'Tabere', status: DistrictStatus.inactive, createdAt: DateTime(2026, 1, 1)),
-    DistrictModel(id: 'd0000000-0000-0000-0000-000000000030', name: 'Owhim', status: DistrictStatus.inactive, createdAt: DateTime(2026, 1, 1)),
-    DistrictModel(id: 'd0000000-0000-0000-0000-000000000031', name: 'Ntobroso', status: DistrictStatus.inactive, createdAt: DateTime(2026, 1, 1)),
-    DistrictModel(id: 'd0000000-0000-0000-0000-000000000032', name: 'Gyankobaa', status: DistrictStatus.inactive, createdAt: DateTime(2026, 1, 1)),
-    DistrictModel(id: 'd0000000-0000-0000-0000-000000000033', name: 'Dabaa New Site', status: DistrictStatus.inactive, createdAt: DateTime(2026, 1, 1)),
-  ];
+  // In-memory runtime storage for offline / mock testing (starts empty)
+  static final List<DistrictModel> _inMemoryDistricts = [];
+  static final Map<String, List<AssemblyModel>> _inMemoryAssemblies = {};
 
-  static final Map<String, List<AssemblyModel>> _mockAssemblies = {
-    'd0000000-0000-0000-0000-000000000001': [
-      AssemblyModel(id: 'a-1', districtId: 'd0000000-0000-0000-0000-000000000001', name: 'Central Assembly', locationText: 'Abuakwa Main Road', createdAt: DateTime.now()),
-      AssemblyModel(id: 'a-2', districtId: 'd0000000-0000-0000-0000-000000000001', name: 'Bethel Assembly', locationText: 'Abuakwa Block 4', createdAt: DateTime.now()),
-      AssemblyModel(id: 'a-3', districtId: 'd0000000-0000-0000-0000-000000000001', name: 'Emmanuel Assembly', locationText: 'Abuakwa Low Cost', createdAt: DateTime.now()),
-      AssemblyModel(id: 'a-4', districtId: 'd0000000-0000-0000-0000-000000000001', name: 'Grace Assembly', locationText: 'Abuakwa Housing Area', createdAt: DateTime.now()),
-    ],
-    'd0000000-0000-0000-0000-000000000002': [
-      AssemblyModel(id: 'a-5', districtId: 'd0000000-0000-0000-0000-000000000002', name: 'Peniel Assembly', locationText: 'North Abuakwa Junction', createdAt: DateTime.now()),
-      AssemblyModel(id: 'a-6', districtId: 'd0000000-0000-0000-0000-000000000002', name: 'Shalom Assembly', locationText: 'Near Presby School', createdAt: DateTime.now()),
-    ],
-    'd0000000-0000-0000-0000-000000000003': [
-      AssemblyModel(id: 'a-7', districtId: 'd0000000-0000-0000-0000-000000000003', name: 'Calvary Assembly', locationText: 'Abuakwa South Station', createdAt: DateTime.now()),
-      AssemblyModel(id: 'a-8', districtId: 'd0000000-0000-0000-0000-000000000003', name: 'Hebron Assembly', locationText: 'South Bypass Road', createdAt: DateTime.now()),
-    ],
-    'd0000000-0000-0000-0000-000000000004': [
-      AssemblyModel(id: 'a-9', districtId: 'd0000000-0000-0000-0000-000000000004', name: 'Tanoso Central Assembly', locationText: 'Tanoso Main Highway', createdAt: DateTime.now()),
-      AssemblyModel(id: 'a-10', districtId: 'd0000000-0000-0000-0000-000000000004', name: 'Moriah Assembly', locationText: 'Tanoso New Site', createdAt: DateTime.now()),
-    ],
-    'd0000000-0000-0000-0000-000000000005': [
-      AssemblyModel(id: 'a-11', districtId: 'd0000000-0000-0000-0000-000000000005', name: 'Akropong Central Assembly', locationText: 'Akropong Market Area', createdAt: DateTime.now()),
-      AssemblyModel(id: 'a-12', districtId: 'd0000000-0000-0000-0000-000000000005', name: 'Rehoboth Assembly', locationText: 'Akropong Hill View', createdAt: DateTime.now()),
-    ],
-  };
+  static void resetState() {
+    _inMemoryDistricts.clear();
+    _inMemoryAssemblies.clear();
+  }
+
+  static String _normalize(String input) {
+    return input.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
+  }
 
   @override
   Future<List<DistrictModel>> getDistricts() async {
     if (!SupabaseConfig.isInitialized) {
-      return List.unmodifiable(_mockDistricts);
+      return List.unmodifiable(_inMemoryDistricts);
     }
     try {
-      final res = await _sb.from('districts').select().order('name');
+      final res = await _sb
+          .from('districts')
+          .select('*, profiles:registered_by(full_name, avatar_url), assemblies(name)')
+          .order('name');
       return (res as List).map((json) => DistrictModel.fromJson(json)).toList();
     } catch (e) {
-      debugPrint('[DistrictsRepository] Error fetching districts: $e. Falling back to local cache.');
-      return List.unmodifiable(_mockDistricts);
+      debugPrint('[DistrictsRepository] Error fetching districts: $e');
+      return List.unmodifiable(_inMemoryDistricts);
+    }
+  }
+
+  @override
+  Future<List<DistrictModel>> getActiveDistricts() async {
+    final all = await getDistricts();
+    return all.where((d) => d.isActive).toList();
+  }
+
+  @override
+  Future<DistrictModel?> getDistrictById(String districtId) async {
+    if (!SupabaseConfig.isInitialized) {
+      return _inMemoryDistricts.cast<DistrictModel?>().firstWhere(
+        (d) => d?.id == districtId,
+        orElse: () => null,
+      );
+    }
+    try {
+      final res = await _sb
+          .from('districts')
+          .select('*, profiles:registered_by(full_name, avatar_url), assemblies(name)')
+          .eq('id', districtId)
+          .maybeSingle();
+      if (res == null) return null;
+      return DistrictModel.fromJson(res);
+    } catch (e) {
+      debugPrint('[DistrictsRepository] Error fetching district by id: $e');
+      return null;
     }
   }
 
   @override
   Future<List<AssemblyModel>> getAssembliesForDistrict(String districtId) async {
     if (!SupabaseConfig.isInitialized) {
-      return _mockAssemblies[districtId] ?? [
-        AssemblyModel(
-          id: 'mock-gen-$districtId',
-          districtId: districtId,
-          name: 'Central Assembly',
-          locationText: 'Main Town Road',
-          createdAt: DateTime.now(),
-        ),
-      ];
+      return _inMemoryAssemblies[districtId] ?? [];
     }
     try {
-      final res = await _sb.from('assemblies').select().eq('district_id', districtId).order('name');
+      final res = await _sb
+          .from('assemblies')
+          .select()
+          .eq('district_id', districtId)
+          .order('name');
       return (res as List).map((json) => AssemblyModel.fromJson(json)).toList();
     } catch (e) {
       debugPrint('[DistrictsRepository] Error fetching assemblies: $e');
-      return _mockAssemblies[districtId] ?? [];
+      return _inMemoryAssemblies[districtId] ?? [];
+    }
+  }
+
+  @override
+  Future<DistrictModel> registerDistrict({
+    required String name,
+    required List<String> assemblies,
+    required DateTime startDate,
+  }) async {
+    final cleanName = name.trim().replaceAll(RegExp(r'\s+'), ' ');
+    if (cleanName.length < 2) {
+      throw Exception('Please enter a valid district name.');
+    }
+
+    // Check duplicate name
+    final existingDistricts = await getDistricts();
+    final isDuplicate = existingDistricts.any((d) => _normalize(d.name) == _normalize(cleanName));
+    if (isDuplicate) {
+      throw Exception('This district is already registered. Contact the Area Head office.');
+    }
+
+    if (!SupabaseConfig.isInitialized) {
+      final districtId = 'dist-${DateTime.now().millisecondsSinceEpoch}';
+      final newDistrict = DistrictModel(
+        id: districtId,
+        name: cleanName,
+        status: DistrictStatus.pending,
+        submittedAt: DateTime.now(),
+        createdAt: DateTime.now(),
+        assemblyNames: assemblies,
+      );
+      _inMemoryDistricts.insert(0, newDistrict);
+
+      final asmList = assemblies.map((asmName) => AssemblyModel(
+        id: 'asm-${DateTime.now().microsecondsSinceEpoch}-$asmName',
+        districtId: districtId,
+        name: asmName.trim(),
+        createdAt: DateTime.now(),
+      )).toList();
+      _inMemoryAssemblies[districtId] = asmList;
+
+      return newDistrict;
+    }
+
+    try {
+      final res = await _sb.rpc('register_district_by_pastor', params: {
+        'p_name': cleanName,
+        'p_assemblies': assemblies,
+        'p_start_date': startDate.toIso8601String().split('T').first,
+      });
+
+      final distId = res['district_id'] as String;
+      final dist = await getDistrictById(distId);
+      return dist ??
+          DistrictModel(
+            id: distId,
+            name: cleanName,
+            status: DistrictStatus.pending,
+            submittedAt: DateTime.now(),
+            createdAt: DateTime.now(),
+            assemblyNames: assemblies,
+          );
+    } catch (e) {
+      final errStr = e.toString().replaceAll('Exception: ', '');
+      if (errStr.contains('already registered')) {
+        throw Exception('This district is already registered. Contact the Area Head office.');
+      }
+      rethrow;
+    }
+  }
+
+  @override
+  Future<DistrictModel> resubmitDistrict({
+    required String districtId,
+    required String name,
+    required List<String> assemblies,
+    required DateTime startDate,
+  }) async {
+    final cleanName = name.trim().replaceAll(RegExp(r'\s+'), ' ');
+
+    if (!SupabaseConfig.isInitialized) {
+      final idx = _inMemoryDistricts.indexWhere((d) => d.id == districtId);
+      final updated = DistrictModel(
+        id: districtId,
+        name: cleanName,
+        status: DistrictStatus.pending,
+        submittedAt: DateTime.now(),
+        decisionNote: null,
+        decidedBy: null,
+        decidedAt: null,
+        createdAt: DateTime.now(),
+        assemblyNames: assemblies,
+      );
+      if (idx != -1) {
+        _inMemoryDistricts[idx] = updated;
+      } else {
+        _inMemoryDistricts.add(updated);
+      }
+
+      final asmList = assemblies.map((asmName) => AssemblyModel(
+        id: 'asm-${DateTime.now().microsecondsSinceEpoch}-$asmName',
+        districtId: districtId,
+        name: asmName.trim(),
+        createdAt: DateTime.now(),
+      )).toList();
+      _inMemoryAssemblies[districtId] = asmList;
+
+      return updated;
+    }
+
+    try {
+      await _sb.from('districts').update({
+        'name': cleanName,
+        'status': DistrictStatus.pending.value,
+        'submitted_at': DateTime.now().toIso8601String(),
+        'decision_note': null,
+        'decided_by': null,
+        'decided_at': null,
+        'updated_at': DateTime.now().toIso8601String(),
+      }).eq('id', districtId);
+
+      // Re-insert assemblies
+      await _sb.from('assemblies').delete().eq('district_id', districtId);
+      for (final a in assemblies) {
+        if (a.trim().isNotEmpty) {
+          await _sb.from('assemblies').insert({
+            'district_id': districtId,
+            'name': a.trim(),
+          });
+        }
+      }
+
+      final dist = await getDistrictById(districtId);
+      return dist!;
+    } catch (e) {
+      debugPrint('[DistrictsRepository] Error resubmitting district: $e');
+      rethrow;
+    }
+  }
+
+  @override
+  Future<void> approveDistrict(String districtId, {String? note}) async {
+    if (!SupabaseConfig.isInitialized) {
+      final idx = _inMemoryDistricts.indexWhere((d) => d.id == districtId);
+      if (idx != -1) {
+        _inMemoryDistricts[idx] = _inMemoryDistricts[idx].copyWith(
+          status: DistrictStatus.active,
+          decidedAt: DateTime.now(),
+          activatedAt: DateTime.now(),
+        );
+      }
+      return;
+    }
+
+    try {
+      await _sb.rpc('approve_district', params: {
+        'p_district_id': districtId,
+        'p_decision_note': note,
+      });
+    } catch (e) {
+      debugPrint('[DistrictsRepository] Error approving district: $e');
+      rethrow;
+    }
+  }
+
+  @override
+  Future<void> rejectDistrict(String districtId, {required String note}) async {
+    if (note.trim().isEmpty) {
+      throw Exception('A note explaining the rejection is required.');
+    }
+
+    if (!SupabaseConfig.isInitialized) {
+      final idx = _inMemoryDistricts.indexWhere((d) => d.id == districtId);
+      if (idx != -1) {
+        _inMemoryDistricts[idx] = _inMemoryDistricts[idx].copyWith(
+          status: DistrictStatus.rejected,
+          decisionNote: note.trim(),
+          decidedAt: DateTime.now(),
+        );
+      }
+      return;
+    }
+
+    try {
+      await _sb.rpc('reject_district', params: {
+        'p_district_id': districtId,
+        'p_decision_note': note.trim(),
+      });
+    } catch (e) {
+      debugPrint('[DistrictsRepository] Error rejecting district: $e');
+      rethrow;
+    }
+  }
+
+  @override
+  Future<DistrictModel> addDistrictDirectly({
+    required String name,
+    required List<String> assemblies,
+  }) async {
+    final cleanName = name.trim().replaceAll(RegExp(r'\s+'), ' ');
+    if (cleanName.length < 2) {
+      throw Exception('Please enter a valid district name.');
+    }
+
+    final existing = await getDistricts();
+    if (existing.any((d) => _normalize(d.name) == _normalize(cleanName))) {
+      throw Exception('This district is already registered.');
+    }
+
+    if (!SupabaseConfig.isInitialized) {
+      final id = 'dist-${DateTime.now().millisecondsSinceEpoch}';
+      final newDist = DistrictModel(
+        id: id,
+        name: cleanName,
+        status: DistrictStatus.active,
+        activatedAt: DateTime.now(),
+        createdAt: DateTime.now(),
+        assemblyNames: assemblies,
+      );
+      _inMemoryDistricts.insert(0, newDist);
+      return newDist;
+    }
+
+    try {
+      final currentUserId = _sb.auth.currentUser?.id;
+      final res = await _sb.from('districts').insert({
+        'name': cleanName,
+        'status': DistrictStatus.active.value,
+        'activated_by': currentUserId,
+        'activated_at': DateTime.now().toIso8601String(),
+      }).select().single();
+
+      final distId = res['id'] as String;
+      for (final a in assemblies) {
+        if (a.trim().isNotEmpty) {
+          await _sb.from('assemblies').insert({
+            'district_id': distId,
+            'name': a.trim(),
+          });
+        }
+      }
+
+      return (await getDistrictById(distId))!;
+    } catch (e) {
+      debugPrint('[DistrictsRepository] Error adding district directly: $e');
+      rethrow;
     }
   }
 
   @override
   Future<void> activateDistrict(String districtId, String activatedByUserId) async {
-    final idx = _mockDistricts.indexWhere((d) => d.id == districtId);
+    final idx = _inMemoryDistricts.indexWhere((d) => d.id == districtId);
     if (idx != -1) {
-      _mockDistricts[idx] = _mockDistricts[idx].copyWith(
+      _inMemoryDistricts[idx] = _inMemoryDistricts[idx].copyWith(
         status: DistrictStatus.active,
         activatedBy: activatedByUserId,
         activatedAt: DateTime.now(),
@@ -132,15 +375,16 @@ class SupabaseDistrictsRepository implements DistrictsRepository {
         'status': DistrictStatus.active.value,
         'activated_by': activatedByUserId,
         'activated_at': DateTime.now().toIso8601String(),
+        'updated_at': DateTime.now().toIso8601String(),
       }).eq('id', districtId);
     }
   }
 
   @override
   Future<void> deactivateDistrict(String districtId) async {
-    final idx = _mockDistricts.indexWhere((d) => d.id == districtId);
+    final idx = _inMemoryDistricts.indexWhere((d) => d.id == districtId);
     if (idx != -1) {
-      _mockDistricts[idx] = _mockDistricts[idx].copyWith(
+      _inMemoryDistricts[idx] = _inMemoryDistricts[idx].copyWith(
         status: DistrictStatus.inactive,
         activatedBy: null,
         activatedAt: null,
@@ -152,6 +396,7 @@ class SupabaseDistrictsRepository implements DistrictsRepository {
         'status': DistrictStatus.inactive.value,
         'activated_by': null,
         'activated_at': null,
+        'updated_at': DateTime.now().toIso8601String(),
       }).eq('id', districtId);
     }
   }

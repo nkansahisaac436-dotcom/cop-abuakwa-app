@@ -66,6 +66,8 @@ class ProjectModel {
   final VisibilityLevel visibility;
   final String? createdBy;
   final String? authorName;
+  final String? authorRole;
+  final String? authorAvatarUrl;
   final List<String> photoUrls;
   final DateTime createdAt;
 
@@ -88,6 +90,8 @@ class ProjectModel {
     this.visibility = VisibilityLevel.members,
     this.createdBy,
     this.authorName,
+    this.authorRole,
+    this.authorAvatarUrl,
     this.photoUrls = const [],
     required this.createdAt,
   });
@@ -96,6 +100,20 @@ class ProjectModel {
   bool get isProject => type == ProjectType.project;
 
   factory ProjectModel.fromJson(Map<String, dynamic> json) {
+    String? author;
+    String? role;
+    String? avatar;
+    if (json['profiles'] != null && json['profiles'] is Map) {
+      final p = json['profiles'] as Map<String, dynamic>;
+      author = p['full_name'] as String?;
+      role = p['role'] as String?;
+      avatar = p['avatar_url'] as String?;
+    } else {
+      author = json['author_name'] as String?;
+      role = json['author_role'] as String?;
+      avatar = json['author_avatar_url'] as String?;
+    }
+
     return ProjectModel(
       id: json['id'] as String,
       districtId: json['district_id'] as String,
@@ -118,7 +136,9 @@ class ProjectModel {
           : null,
       visibility: VisibilityLevel.fromString(json['visibility'] as String?),
       createdBy: json['created_by'] as String?,
-      authorName: json['author_name'] as String?,
+      authorName: author,
+      authorRole: role,
+      authorAvatarUrl: avatar,
       photoUrls: (json['photo_urls'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'] as String)

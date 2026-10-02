@@ -5,7 +5,10 @@ import 'package:intl/intl.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_dimensions.dart';
 import '../../../../core/widgets/app_text_field.dart';
+import '../../../../core/widgets/author_attribution_header.dart';
+import '../../../../core/widgets/image_gallery_viewer.dart';
 import '../../../../core/widgets/primary_button.dart';
+import '../../../auth/domain/models/profile_model.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../domain/models/project_model.dart';
 import '../providers/projects_provider.dart';
@@ -226,6 +229,16 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  if (_project.authorName != null) ...[
+                    AuthorAttributionHeader(
+                      authorName: _project.authorName!,
+                      authorRole: UserRole.pastor,
+                      authorAvatarUrl: _project.authorAvatarUrl,
+                      districtName: _project.districtName,
+                      createdAt: _project.createdAt,
+                    ),
+                    const SizedBox(height: 14),
+                  ],
                   Row(
                     children: [
                       Container(
@@ -345,6 +358,10 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> {
                       height: 1.45,
                     ),
                   ),
+                  if (_project.photoUrls.isNotEmpty) ...[
+                    const SizedBox(height: 14),
+                    FeedImageGallery(imageUrls: _project.photoUrls),
+                  ],
                   const SizedBox(height: 14),
 
                   if (_project.lat != null && _project.lng != null)

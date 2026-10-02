@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:intl/intl.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/widgets/author_attribution_header.dart';
+import '../../../../core/widgets/image_gallery_viewer.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../domain/models/post_model.dart';
 import '../providers/feeds_provider.dart';
@@ -86,34 +87,13 @@ class PastorThoughtsScreen extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        CircleAvatar(
-                          radius: 16,
-                          backgroundColor: AppColors.navy.withValues(alpha: 0.1),
-                          child: const Icon(Icons.person, color: AppColors.navy, size: 16),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            thought.authorName ?? 'District Minister',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.nunitoSans(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          DateFormat('MMM d, h:mm a').format(thought.createdAt),
-                          style: GoogleFonts.nunitoSans(
-                            fontSize: 11,
-                            color: AppColors.softGrey,
-                          ),
-                        ),
-                      ],
+                    AuthorAttributionHeader(
+                      authorName: thought.authorName,
+                      authorRole: thought.authorRole ?? 'pastor',
+                      authorAvatarUrl: thought.authorAvatarUrl,
+                      districtName: thought.districtName,
+                      ministryName: thought.ministryName,
+                      timestamp: thought.createdAt,
                     ),
                     const SizedBox(height: 10),
                     Text(
@@ -133,6 +113,10 @@ class PastorThoughtsScreen extends ConsumerWidget {
                         height: 1.4,
                       ),
                     ),
+                    if (thought.mediaUrls.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      FeedImageGallery(imageUrls: thought.mediaUrls),
+                    ],
                   ],
                 ),
               );

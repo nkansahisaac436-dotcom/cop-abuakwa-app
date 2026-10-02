@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_dimensions.dart';
+import '../../../../core/models/media_attachment.dart';
 import '../../../../core/widgets/app_text_field.dart';
+import '../../../../core/widgets/media_picker.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../projects/domain/models/project_model.dart';
@@ -28,6 +30,7 @@ class _CreatePostSheetState extends ConsumerState<CreatePostSheet> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _bodyController = TextEditingController();
+  List<MediaAttachment> _mediaAttachments = [];
 
   late PostType _type;
   late VisibilityLevel _visibility;
@@ -62,6 +65,16 @@ class _CreatePostSheetState extends ConsumerState<CreatePostSheet> {
 
     try {
       final user = ref.read(authStateProvider).value;
+
+      final mediaBytes = _mediaAttachments
+          .where((m) => m.bytes != null)
+          .map((m) => m.bytes!)
+          .toList();
+
+      final captions = _mediaAttachments
+          .map((m) => m.caption ?? '')
+          .toList();
+
       await ref.read(publicFeedProvider.notifier).createPost(
             title: _titleController.text,
             body: _bodyController.text,
@@ -69,6 +82,8 @@ class _CreatePostSheetState extends ConsumerState<CreatePostSheet> {
             visibility: _visibility,
             ministryId: widget.ministryId,
             districtId: user?.districtId,
+            mediaBytes: mediaBytes,
+            captions: captions,
           );
 
       if (mounted) {
@@ -169,7 +184,18 @@ class _CreatePostSheetState extends ConsumerState<CreatePostSheet> {
                 maxLines: 4,
                 validator: (v) => v == null || v.trim().isEmpty ? 'Content is required' : null,
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 14),
+
+              // Photos Media Picker
+              MediaPicker(
+                initialMedia: _mediaAttachments,
+                onMediaChanged: (list) {
+                  setState(() {
+                    _mediaAttachments = list;
+                  });
+                },
+              ),
+              const SizedBox(height: 14),
 
               // Visibility Selector with one-line explainer
               Text(

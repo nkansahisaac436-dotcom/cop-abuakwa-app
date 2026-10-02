@@ -10,15 +10,16 @@
 ## 🏛️ Key Roles & Features
 
 ### 1. 👑 Area Head (Executive Oversight)
-- **District Governance:** Activate or deactivate district self-registration for all 33 districts.
-- **Invitation Hub:** Generate secure, single-use invite codes (`ABK-XXXX-XX`) for incoming pastors and ministry leaders, with multi-channel sharing (WhatsApp, SMS, clipboard) and active invite cancellation.
+- **District Governance & Approval:** Review pastor self-registered districts across Pending, Active, and Rejected tabs with approval/rejection notes, activation toggles, and direct district creation.
+- **Invitation Hub:** Generate secure, single-use invite codes (`ABK-XXXX-XX`) for incoming pastors (with optional district assignment) and ministry leaders, with multi-channel sharing (WhatsApp, SMS, clipboard) and active invite cancellation.
 - **Supervisory Logs:** Record on-site supervision visits with location tagging, photos, and leadership notes.
 - **Tenure & Transfer Decisions:** Review transfer requests, approve handovers, and access permanent read-only tenure archives.
 - **Area-Wide Broadcasts:** Publish priority announcements directly to all members and leaders.
 
 ### 2. 📖 District Pastors
-- **District Projects & Events:** Create and track district infrastructure projects and events with milestone updates and progress percentages.
-- **Pastoral Thoughts Feed:** Share biblical reflections, devotionals, and pastoral messages with the Area.
+- **District Self-Registration:** Pastors register their new district, local assemblies list, and tenure start date upon invite activation, awaiting Area Head approval before publishing activities.
+- **District Projects & Events:** Create and track district infrastructure projects and events with photo attachments, milestone updates, and progress percentages.
+- **Pastoral Thoughts Feed:** Share biblical reflections, devotionals, photo galleries, and pastoral messages with the Area.
 - **Virtual Pastoral Calls:** Instant and scheduled group audio/video calls via integrated Jitsi Meet.
 - **Tenure Transfer Request:** 1-tap transfer request submission that compiles a comprehensive tenure dossier (projects, events, updates, thoughts) and generates standardized PDF archives (`Pastor <Full Name>, <StartYear>-<EndYear>`).
 
@@ -31,17 +32,19 @@
   - 🌸 Women's Ministry
 
 ### 4. ⛪ Church Members
-- **Area & Ministry Feeds:** Real-time updates filtered by Row-Level-Security (RLS).
-- **Public Projects & Events:** View public district milestones, chapel builds, and upcoming events.
-- **Controlled Sign-Up:** Secure registration restricted to approved, active districts and verified local assemblies.
+- **Area & Ministry Feeds:** Real-time updates with multi-image galleries and swipeable carousels filtered by Row-Level-Security (RLS).
+- **Public Projects & Events:** View public district milestones, chapel builds, and upcoming events with photo updates.
+- **Controlled Sign-Up:** Secure registration restricted to approved, active districts and verified local assemblies (pending districts dynamically greyed out).
+- **Author Attribution:** Safe attribution headers showing avatar, name, role badge, and affiliation with safe modal profile cards (private email and phone hidden).
 
 ---
 
-## 🔐 Authentication & Invite Security
+## 🔐 Authentication, Security & Profiles
 
 - **4-Role Chip Selector:** Member, Pastor, Leader, Area Head.
 - **Two-Step Invite Flow:** Pastors and leaders redeem cryptographic invite codes auto-formatted as `ABK-XXXX-XX`. Includes rate-limiting (15-minute lockout after 5 consecutive failed attempts).
-- **Tenure Integrity:** Roles, district assignments, and ministry allocations are bound to verified invite tokens—never editable by the end user.
+- **In-App Password Management:** Dedicated "Change Password" dialog on the Profile screen for all authenticated roles.
+- **Profile Avatars & Compression:** Client-side smart image compression (1600px for post media, 512px square for avatars) with private storage buckets.
 - **Role Verification Guard:** Strict role matching on sign-in prevents unauthorized privilege escalation.
 
 ---

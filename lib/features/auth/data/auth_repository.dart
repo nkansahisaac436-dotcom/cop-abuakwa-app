@@ -44,6 +44,16 @@ abstract class AuthRepository {
 
   Future<void> cancelInvite(String inviteId);
 
+  Future<UserProfile> uploadAvatar(Uint8List imageBytes);
+
+  Future<UserProfile> updateProfile({
+    String? fullName,
+    String? phone,
+    String? avatarUrl,
+  });
+
+  Future<void> changePassword(String newPassword);
+
   Future<void> signOut();
   Future<UserProfile?> getCurrentProfile();
   Stream<AuthState> get authStateChanges;
@@ -65,15 +75,28 @@ class SupabaseAuthRepository implements AuthRepository {
   static int _failedInviteAttempts = 0;
   static DateTime? _inviteLockoutUntil;
 
-  // Mock in-memory profiles for offline testing
+  // Mock in-memory profiles for offline / local testing
   static UserProfile? _currentMockUser;
 
   static void resetMockState() {
     _currentMockUser = null;
     _failedInviteAttempts = 0;
     _inviteLockoutUntil = null;
+    _mockUsers.clear();
+    _mockUsers.add(
+      UserProfile(
+        id: 'mock-area-head-id',
+        fullName: 'Apostle Area Head',
+        email: 'areahead@copabuakwa.org',
+        role: UserRole.areaHead,
+        status: ProfileStatus.active,
+        createdAt: DateTime(2026, 1, 1),
+      ),
+    );
+    _mockInvites.clear();
   }
 
+  // Only real Area Head is preserved in mock state; all demo users removed
   static final List<UserProfile> _mockUsers = [
     UserProfile(
       id: 'mock-area-head-id',
@@ -83,60 +106,10 @@ class SupabaseAuthRepository implements AuthRepository {
       status: ProfileStatus.active,
       createdAt: DateTime(2026, 1, 1),
     ),
-    UserProfile(
-      id: 'mock-pastor-id',
-      fullName: 'Pastor Enoch Agyemang',
-      email: 'pastor@copabuakwa.org',
-      role: UserRole.pastor,
-      status: ProfileStatus.active,
-      districtId: 'd0000000-0000-0000-0000-000000000002', // Abuakwa North
-      createdAt: DateTime(2026, 1, 1),
-    ),
-    UserProfile(
-      id: 'mock-member-id',
-      fullName: 'Kofi Mensah',
-      email: 'kofi@example.com',
-      role: UserRole.member,
-      status: ProfileStatus.active,
-      districtId: 'd0000000-0000-0000-0000-000000000002',
-      assemblyId: 'a-5',
-      createdAt: DateTime(2026, 1, 1),
-    ),
-    UserProfile(
-      id: 'mock-leader-id',
-      fullName: 'Sister Grace Osei',
-      email: 'womenleader@copabuakwa.org',
-      role: UserRole.ministryLeader,
-      status: ProfileStatus.active,
-      createdAt: DateTime(2026, 1, 1),
-    ),
   ];
 
-  // In-memory invites store
-  static final List<InviteModel> _mockInvites = [
-    InviteModel(
-      id: 'inv-1',
-      code: 'ABK-7K4P-2M',
-      role: UserRole.pastor,
-      targetName: 'Pastor Kwabena Darko',
-      districtId: 'd0000000-0000-0000-0000-000000000001',
-      districtName: 'Abuakwa Central District',
-      status: 'pending',
-      createdAt: DateTime.now().subtract(const Duration(hours: 4)),
-      expiresAt: DateTime.now().add(const Duration(days: 7)),
-    ),
-    InviteModel(
-      id: 'inv-2',
-      code: 'ABK-3Y9W-8T',
-      role: UserRole.ministryLeader,
-      targetName: 'Brother Emmanuel Addo',
-      ministryId: 'm-youth',
-      ministryName: 'Youth Ministry',
-      status: 'pending',
-      createdAt: DateTime.now().subtract(const Duration(hours: 12)),
-      expiresAt: DateTime.now().add(const Duration(days: 7)),
-    ),
-  ];
+  // In-memory runtime invites store (starts empty)
+  static final List<InviteModel> _mockInvites = [];
 
   @override
   Stream<AuthState> get authStateChanges {
@@ -154,7 +127,7 @@ class SupabaseAuthRepository implements AuthRepository {
   }) async {
     final cleanEmail = email.trim().toLowerCase();
 
-    // 1. If Supabase is offline/demo mode, verify against demo users
+    // 1. If Supabase is offline/demo mode, verify against mock users
     if (!SupabaseConfig.isInitialized) {
       if (cleanEmail == 'noprofile@copabuakwa.org') {
         throw Exception('Your account is not set up yet. Please contact the Area Head office.');
@@ -248,14 +221,14 @@ class SupabaseAuthRepository implements AuthRepository {
   }) async {
     final cleanEmail = email.trim().toLowerCase();
 
-    // 1. Check District Status: If Inactive, BLOCK registration immediately
+    // 1. Check District Status: If Inactive or Pending, BLOCK registration immediately
     final districts = await _districtsRepo.getDistricts();
     final district = districts.firstWhere(
       (d) => d.id == districtId,
       orElse: () => throw Exception(AppStrings.districtInactiveBlockedToast),
     );
 
-    if (district.isInactive) {
+    if (!district.isActive) {
       throw Exception(AppStrings.districtInactiveBlockedToast);
     }
 
@@ -385,7 +358,6 @@ class SupabaseAuthRepository implements AuthRepository {
 
     // 1. Mock / Offline Mode Redemption
     if (!SupabaseConfig.isInitialized) {
-      // Mark invite redeemed
       final index = _mockInvites.indexWhere((inv) => inv.id == verified.id);
       if (index != -1) {
         final current = _mockInvites[index];
@@ -569,12 +541,108 @@ class SupabaseAuthRepository implements AuthRepository {
     }
   }
 
+  @override
+  Future<UserProfile> uploadAvatar(Uint8List imageBytes) async {
+    final currentProfile = await getCurrentProfile();
+    if (currentProfile == null) {
+      throw Exception('Not authenticated.');
+    }
+
+    if (!SupabaseConfig.isInitialized) {
+      final updated = currentProfile.copyWith(
+        avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500',
+      );
+      _currentMockUser = updated;
+      final idx = _mockUsers.indexWhere((u) => u.id == currentProfile.id);
+      if (idx != -1) _mockUsers[idx] = updated;
+      return updated;
+    }
+
+    try {
+      final fileName = '${currentProfile.id}/avatar_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      await _sb.storage.from('avatars').uploadBinary(
+        fileName,
+        imageBytes,
+        fileOptions: const FileOptions(contentType: 'image/jpeg', upsert: true),
+      );
+
+      final publicUrl = _sb.storage.from('avatars').getPublicUrl(fileName);
+      await _sb.from('profiles').update({
+        'avatar_url': publicUrl,
+        'updated_at': DateTime.now().toIso8601String(),
+      }).eq('id', currentProfile.id);
+
+      final refreshed = await _fetchProfileById(currentProfile.id);
+      return refreshed ?? currentProfile.copyWith(avatarUrl: publicUrl);
+    } catch (e) {
+      debugPrint('[AuthRepository] Error uploading avatar: $e');
+      rethrow;
+    }
+  }
+
+  @override
+  Future<UserProfile> updateProfile({
+    String? fullName,
+    String? phone,
+    String? avatarUrl,
+  }) async {
+    final currentProfile = await getCurrentProfile();
+    if (currentProfile == null) {
+      throw Exception('Not authenticated.');
+    }
+
+    final updated = currentProfile.copyWith(
+      fullName: fullName ?? currentProfile.fullName,
+      phone: phone ?? currentProfile.phone,
+      avatarUrl: avatarUrl ?? currentProfile.avatarUrl,
+    );
+
+    if (!SupabaseConfig.isInitialized) {
+      _currentMockUser = updated;
+      final idx = _mockUsers.indexWhere((u) => u.id == currentProfile.id);
+      if (idx != -1) _mockUsers[idx] = updated;
+      return updated;
+    }
+
+    try {
+      await _sb.from('profiles').update({
+        'full_name': ?fullName,
+        'phone': ?phone,
+        'avatar_url': ?avatarUrl,
+        'updated_at': DateTime.now().toIso8601String(),
+      }).eq('id', currentProfile.id);
+
+      return (await _fetchProfileById(currentProfile.id)) ?? updated;
+    } catch (e) {
+      debugPrint('[AuthRepository] Error updating profile: $e');
+      rethrow;
+    }
+  }
+
   static String _generateRandomInviteCode() {
     const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'; // Excludes 0, 1, I, O to avoid confusion
     final rnd = Random.secure();
     final p1 = List.generate(4, (_) => chars[rnd.nextInt(chars.length)]).join();
     final p2 = List.generate(2, (_) => chars[rnd.nextInt(chars.length)]).join();
     return 'ABK-$p1-$p2';
+  }
+
+  @override
+  Future<void> changePassword(String newPassword) async {
+    if (newPassword.trim().length < 6) {
+      throw Exception('Password must be at least 6 characters.');
+    }
+    if (!SupabaseConfig.isInitialized) {
+      return;
+    }
+    try {
+      await _sb.auth.updateUser(
+        UserAttributes(password: newPassword.trim()),
+      );
+    } catch (e) {
+      debugPrint('[AuthRepository] Error changing password: $e');
+      rethrow;
+    }
   }
 
   @override

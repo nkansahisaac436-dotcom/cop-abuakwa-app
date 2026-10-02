@@ -43,16 +43,6 @@ class _InvitePastorScreenState extends ConsumerState<InvitePastorScreen> {
   Future<void> _handleGenerateInvite() async {
     if (!_formKey.currentState!.validate()) return;
 
-    if (_selectedRole == UserRole.pastor && _selectedDistrict == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select a district for this pastor.'),
-          backgroundColor: AppColors.error,
-        ),
-      );
-      return;
-    }
-
     if (_selectedRole == UserRole.ministryLeader && _selectedMinistry == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -80,6 +70,8 @@ class _InvitePastorScreenState extends ConsumerState<InvitePastorScreen> {
       setState(() {
         _latestGeneratedInvite = invite;
         _nameController.clear();
+        _selectedDistrict = null;
+        _selectedMinistry = null;
       });
 
       if (mounted) {
@@ -314,27 +306,48 @@ class _InvitePastorScreenState extends ConsumerState<InvitePastorScreen> {
 
                     // District or Ministry Picker
                     if (_selectedRole == UserRole.pastor) ...[
-                      Text(
-                        'Assigned District',
-                        style: GoogleFonts.nunitoSans(
-                          fontSize: AppDimensions.fontSizeLabel,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Assign to an existing district (optional)',
+                            style: GoogleFonts.nunitoSans(
+                              fontSize: AppDimensions.fontSizeLabel,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          if (_selectedDistrict != null)
+                            GestureDetector(
+                              onTap: () => setState(() => _selectedDistrict = null),
+                              child: const Text('Clear', style: TextStyle(color: AppColors.error, fontSize: 12)),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      const Text(
+                        'Leave empty if the incoming pastor will register a new district.',
+                        style: TextStyle(fontSize: 11, color: AppColors.softGrey),
                       ),
                       const SizedBox(height: 6),
                       districtsAsync.when(
                         loading: () => const Center(child: CircularProgressIndicator()),
                         error: (err, _) => Text('Error: $err'),
                         data: (districts) {
-                          return DropdownButtonFormField<DistrictModel>(
+                          return DropdownButtonFormField<DistrictModel?>(
                             initialValue: _selectedDistrict,
-                            hint: const Text('Select Abuakwa Area District'),
-                            items: districts.map((d) {
-                              return DropdownMenuItem(
-                                value: d,
-                                child: Text('${d.name} (${d.isActive ? "Active" : "Inactive"})'),
-                              );
-                            }).toList(),
+                            hint: const Text('No district assigned (Self-register)'),
+                            items: [
+                              const DropdownMenuItem<DistrictModel?>(
+                                value: null,
+                                child: Text('No district assigned (Self-register)'),
+                              ),
+                              ...districts.map((d) {
+                                return DropdownMenuItem<DistrictModel?>(
+                                  value: d,
+                                  child: Text('${d.name} (${d.isActive ? "Active" : "Inactive"})'),
+                                );
+                              }),
+                            ],
                             onChanged: (val) {
                               setState(() {
                                 _selectedDistrict = val;

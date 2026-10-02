@@ -26,6 +26,10 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Abuakwa Area Connect needs camera access so you can take photos of district projects, events, and update your profile picture.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Abuakwa Area Connect needs photo library access so you can upload images for district projects, updates, and your profile avatar.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

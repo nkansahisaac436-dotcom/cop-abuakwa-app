@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:intl/intl.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_strings.dart';
+import '../../../../core/widgets/author_attribution_header.dart';
+import '../../../../core/widgets/image_gallery_viewer.dart';
 import '../../../auth/domain/models/profile_model.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../domain/models/post_model.dart';
@@ -110,7 +111,6 @@ class PublicFeedScreen extends ConsumerWidget {
   }
 
   Widget _buildPostCard(BuildContext context, PostModel post) {
-    final dateFormat = DateFormat('MMM d, yyyy • h:mm a');
     final isAnnouncement = post.isAnnouncement;
 
     return Container(
@@ -133,66 +133,14 @@ class PublicFeedScreen extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Author & Badge Row
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 18,
-                backgroundColor: isAnnouncement ? AppColors.gold : AppColors.navy,
-                child: Icon(
-                  isAnnouncement ? Icons.campaign : Icons.person,
-                  color: AppColors.white,
-                  size: 18,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      post.authorName ?? 'Area Minister',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.nunitoSans(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                        color: AppColors.text,
-                      ),
-                    ),
-                    Text(
-                      dateFormat.format(post.createdAt),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.nunitoSans(
-                        fontSize: 11,
-                        color: AppColors.softGrey,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              // Type Badge
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: isAnnouncement ? AppColors.warningFill : AppColors.background,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: isAnnouncement ? AppColors.warningBorder : AppColors.border,
-                  ),
-                ),
-                child: Text(
-                  post.type.shortLabel,
-                  style: GoogleFonts.nunitoSans(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: isAnnouncement ? AppColors.warningText : AppColors.navy,
-                  ),
-                ),
-              ),
-            ],
+          // Author Attribution Header with profile card modal
+          AuthorAttributionHeader(
+            authorName: post.authorName,
+            authorRole: post.authorRole,
+            authorAvatarUrl: post.authorAvatarUrl,
+            districtName: post.districtName,
+            ministryName: post.ministryName,
+            timestamp: post.createdAt,
           ),
           const SizedBox(height: 12),
 
@@ -216,6 +164,12 @@ class PublicFeedScreen extends ConsumerWidget {
               height: 1.45,
             ),
           ),
+
+          // Image Gallery Viewer if photos exist
+          if (post.mediaUrls.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            FeedImageGallery(imageUrls: post.mediaUrls),
+          ],
         ],
       ),
     );

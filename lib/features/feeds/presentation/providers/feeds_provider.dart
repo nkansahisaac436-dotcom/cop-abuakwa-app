@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cop_abuakwa_app/features/auth/domain/models/profile_model.dart';
 import 'package:cop_abuakwa_app/features/auth/presentation/providers/auth_provider.dart';
@@ -29,6 +30,9 @@ class PublicFeedNotifier extends AsyncNotifier<List<PostModel>> {
     required VisibilityLevel visibility,
     String? ministryId,
     String? districtId,
+    List<String> mediaUrls = const [],
+    List<Uint8List> mediaBytes = const [],
+    List<String> captions = const [],
   }) async {
     final repo = ref.read(feedsRepositoryProvider);
     final user = ref.read(authStateProvider).value;
@@ -38,12 +42,16 @@ class PublicFeedNotifier extends AsyncNotifier<List<PostModel>> {
       authorId: user.id,
       authorName: user.fullName,
       authorRole: user.role.value,
+      authorAvatarUrl: user.avatarUrl,
       title: title,
       body: body,
       type: type,
       visibility: visibility,
       ministryId: ministryId,
       districtId: districtId,
+      mediaUrls: mediaUrls,
+      mediaBytes: mediaBytes,
+      captions: captions,
     );
 
     state = AsyncValue.data([newPost, ...?state.value]);

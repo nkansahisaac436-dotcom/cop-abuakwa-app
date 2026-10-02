@@ -1,7 +1,7 @@
 -- ============================================================================
 -- Seed: 03_users_seed.sql
--- Description: Seeds the initial Area Head, Pastors, Ministry Leaders, and Members
---              in both auth.users and public.profiles with confirmed emails.
+-- Description: Seeds ONLY the real Area Head account and profile.
+--              No demo pastors, leaders, or members.
 --              Idempotent: Safe to run multiple times without creating duplicates.
 -- ============================================================================
 
@@ -56,7 +56,7 @@ BEGIN
         raw_user_meta_data = EXCLUDED.raw_user_meta_data,
         updated_at = NOW();
 
-    -- Also ensure identities entry exists for email login
+    -- Ensure identities entry exists for email login
     INSERT INTO auth.identities (
         id,
         user_id,
@@ -115,7 +115,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 1. SEED AREA HEAD (Apostle Area Head)
+-- 1. SEED AREA HEAD ONLY (Apostle Area Head)
 SELECT seed_user(
     '00000000-0000-0000-0000-000000000001'::UUID,
     'areahead@copabuakwa.org',
@@ -123,60 +123,6 @@ SELECT seed_user(
     'Apostle Area Head',
     'area_head'::user_role,
     'active'::profile_status
-);
-
--- 2. SEED PASTOR (Pastor Enoch Agyemang - Abuakwa North District)
-SELECT seed_user(
-    '00000000-0000-0000-0000-000000000002'::UUID,
-    'pastor@copabuakwa.org',
-    'AbuakwaPastor2026!',
-    'Pastor Enoch Agyemang',
-    'pastor'::user_role,
-    'active'::profile_status,
-    'd0000000-0000-0000-0000-000000000002'::UUID
-);
-
--- Ensure active pastor tenure exists
-INSERT INTO public.pastor_tenures (
-    pastor_id,
-    district_id,
-    start_date,
-    status
-) VALUES (
-    '00000000-0000-0000-0000-000000000002'::UUID,
-    'd0000000-0000-0000-0000-000000000002'::UUID,
-    '2026-01-01',
-    'active'
-) ON CONFLICT DO NOTHING;
-
--- 3. SEED MINISTRY LEADER (Sister Grace Osei - Women's Ministry)
-SELECT seed_user(
-    '00000000-0000-0000-0000-000000000003'::UUID,
-    'womenleader@copabuakwa.org',
-    'AbuakwaLeader2026!',
-    'Sister Grace Osei',
-    'ministry_leader'::user_role,
-    'active'::profile_status
-);
-
--- Ensure ministry leader assignment exists
-INSERT INTO public.ministry_leaders (
-    user_id,
-    ministry_id
-) VALUES (
-    '00000000-0000-0000-0000-000000000003'::UUID,
-    'a0000000-0000-0000-0000-000000000005'::UUID
-) ON CONFLICT DO NOTHING;
-
--- 4. SEED MEMBER (Kofi Mensah)
-SELECT seed_user(
-    '00000000-0000-0000-0000-000000000004'::UUID,
-    'kofi@example.com',
-    'AbuakwaMember2026!',
-    'Kofi Mensah',
-    'member'::user_role,
-    'active'::profile_status,
-    'd0000000-0000-0000-0000-000000000002'::UUID
 );
 
 -- Drop helper function after seeding

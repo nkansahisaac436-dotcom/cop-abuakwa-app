@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/widgets/author_attribution_header.dart';
+import '../../../../core/widgets/image_gallery_viewer.dart';
+import '../../../auth/domain/models/profile_model.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../domain/models/project_model.dart';
 import '../providers/projects_provider.dart';
@@ -193,6 +196,16 @@ class _ProjectsListScreenState extends ConsumerState<ProjectsListScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (project.authorName != null) ...[
+              AuthorAttributionHeader(
+                authorName: project.authorName!,
+                authorRole: UserRole.pastor,
+                authorAvatarUrl: project.authorAvatarUrl,
+                districtName: project.districtName,
+                createdAt: project.createdAt,
+              ),
+              const SizedBox(height: 10),
+            ],
             // Top Row: Type & Status
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -273,6 +286,10 @@ class _ProjectsListScreenState extends ConsumerState<ProjectsListScreen> {
                 color: AppColors.text,
               ),
             ),
+            if (project.photoUrls.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              FeedImageGallery(imageUrls: project.photoUrls),
+            ],
             const SizedBox(height: 14),
 
             // Progress Bar

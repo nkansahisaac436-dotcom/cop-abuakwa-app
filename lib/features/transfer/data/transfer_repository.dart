@@ -31,47 +31,14 @@ class SupabaseTransferRepository implements TransferRepository {
 
   SupabaseClient get _sb => _client ?? SupabaseConfig.client;
 
-  static final List<TransferRequestModel> _mockRequests = [
-    TransferRequestModel(
-      id: 'req-1',
-      pastorId: 'mock-pastor-id',
-      pastorName: 'Pastor Enoch Agyemang',
-      pastorEmail: 'pastor@copabuakwa.org',
-      tenureId: 't0000000-0000-0000-0000-000000000001',
-      districtName: 'Abuakwa North',
-      requestedAt: DateTime.now().subtract(const Duration(hours: 4)),
-      status: TransferStatus.pending,
-    ),
-  ];
+  // In-memory runtime storage for offline / mock testing (starts empty)
+  static final List<TransferRequestModel> _inMemoryRequests = [];
+  static final List<TenureArchiveModel> _inMemoryArchives = [];
 
-  static final List<TenureArchiveModel> _mockArchives = [
-    TenureArchiveModel(
-      id: 'arch-1',
-      tenureId: 't0000000-0000-0000-0000-000000000099',
-      title: 'Pastor Enoch Agyemang, 2021-2026',
-      summaryJson: {
-        'pastor_name': 'Pastor Enoch Agyemang',
-        'pastor_email': 'pastor@copabuakwa.org',
-        'district_name': 'Abuakwa North',
-        'start_date': '2021-09-01',
-        'end_date': '2026-09-30',
-        'total_projects': 4,
-        'total_events': 14,
-        'total_updates': 32,
-        'total_thoughts': 18,
-        'projects_summary': [
-          {'title': 'Peniel Mission House Construction', 'status': 'ongoing', 'progress_pct': 65},
-          {'title': 'North Abuakwa Children Block', 'status': 'completed', 'progress_pct': 100},
-          {'title': 'District Bus Acquisition', 'status': 'completed', 'progress_pct': 100},
-        ],
-        'thoughts_summary': [
-          {'title': 'Leading with Endurance in Ministry', 'created_at': '2026-09-29'},
-          {'title': 'Fostering Prayer in Local Assemblies', 'created_at': '2026-08-15'},
-        ],
-      },
-      createdAt: DateTime.now().subtract(const Duration(days: 10)),
-    ),
-  ];
+  static void resetState() {
+    _inMemoryRequests.clear();
+    _inMemoryArchives.clear();
+  }
 
   @override
   Future<TransferRequestModel> requestTransfer({
@@ -87,7 +54,7 @@ class SupabaseTransferRepository implements TransferRepository {
       status: TransferStatus.pending,
     );
 
-    _mockRequests.insert(0, newReq);
+    _inMemoryRequests.insert(0, newReq);
 
     if (SupabaseConfig.isInitialized) {
       try {
@@ -108,7 +75,7 @@ class SupabaseTransferRepository implements TransferRepository {
   @override
   Future<List<TransferRequestModel>> getPendingTransferRequests() async {
     if (!SupabaseConfig.isInitialized) {
-      return _mockRequests.where((r) => r.isPending).toList();
+      return _inMemoryRequests.where((r) => r.isPending).toList();
     }
     try {
       final res = await _sb
@@ -128,7 +95,7 @@ class SupabaseTransferRepository implements TransferRepository {
       }).toList();
     } catch (e) {
       debugPrint('[TransferRepository] Error fetching requests: $e');
-      return _mockRequests.where((r) => r.isPending).toList();
+      return _inMemoryRequests.where((r) => r.isPending).toList();
     }
   }
 
@@ -138,11 +105,10 @@ class SupabaseTransferRepository implements TransferRepository {
     required String decidedByUserId,
     String? note,
   }) async {
-    // 1. Update mock records
-    final reqIdx = _mockRequests.indexWhere((r) => r.id == requestId);
+    final reqIdx = _inMemoryRequests.indexWhere((r) => r.id == requestId);
     if (reqIdx != -1) {
-      final req = _mockRequests[reqIdx];
-      _mockRequests[reqIdx] = TransferRequestModel(
+      final req = _inMemoryRequests[reqIdx];
+      _inMemoryRequests[reqIdx] = TransferRequestModel(
         id: req.id,
         pastorId: req.pastorId,
         pastorName: req.pastorName,
@@ -156,12 +122,11 @@ class SupabaseTransferRepository implements TransferRepository {
         note: note,
       );
 
-      // Create Mock Tenure Archive row titled "Pastor <Full Name>, <startYear>-<endYear>"
       final currentYear = DateTime.now().year;
       final startYear = currentYear - 4;
       final archiveTitle = 'Pastor ${req.pastorName ?? "Minister"}, $startYear-$currentYear';
 
-      _mockArchives.insert(
+      _inMemoryArchives.insert(
         0,
         TenureArchiveModel(
           id: 'arch-${DateTime.now().millisecondsSinceEpoch}',
@@ -173,17 +138,16 @@ class SupabaseTransferRepository implements TransferRepository {
             'district_name': req.districtName ?? 'District',
             'start_date': '$startYear-09-01',
             'end_date': DateTime.now().toIso8601String().substring(0, 10),
-            'total_projects': 3,
-            'total_events': 8,
-            'total_updates': 18,
-            'total_thoughts': 12,
+            'total_projects': 0,
+            'total_events': 0,
+            'total_updates': 0,
+            'total_thoughts': 0,
           },
           createdAt: DateTime.now(),
         ),
       );
     }
 
-    // 2. Call Supabase Atomic Procedure
     if (SupabaseConfig.isInitialized) {
       try {
         await _sb.rpc('approve_pastor_transfer', params: {
@@ -203,10 +167,10 @@ class SupabaseTransferRepository implements TransferRepository {
     required String decidedByUserId,
     required String note,
   }) async {
-    final reqIdx = _mockRequests.indexWhere((r) => r.id == requestId);
+    final reqIdx = _inMemoryRequests.indexWhere((r) => r.id == requestId);
     if (reqIdx != -1) {
-      final req = _mockRequests[reqIdx];
-      _mockRequests[reqIdx] = TransferRequestModel(
+      final req = _inMemoryRequests[reqIdx];
+      _inMemoryRequests[reqIdx] = TransferRequestModel(
         id: req.id,
         pastorId: req.pastorId,
         pastorName: req.pastorName,
@@ -240,13 +204,13 @@ class SupabaseTransferRepository implements TransferRepository {
     if (!SupabaseConfig.isInitialized) {
       if (searchQuery != null && searchQuery.isNotEmpty) {
         final query = searchQuery.toLowerCase();
-        return _mockArchives.where((a) {
+        return _inMemoryArchives.where((a) {
           return a.title.toLowerCase().contains(query) ||
               a.pastorName.toLowerCase().contains(query) ||
               a.districtName.toLowerCase().contains(query);
         }).toList();
       }
-      return List.unmodifiable(_mockArchives);
+      return List.unmodifiable(_inMemoryArchives);
     }
 
     try {
@@ -265,16 +229,16 @@ class SupabaseTransferRepository implements TransferRepository {
       return list;
     } catch (e) {
       debugPrint('[TransferRepository] Error fetching archives: $e');
-      return _mockArchives;
+      return _inMemoryArchives;
     }
   }
 
   @override
   Future<TenureArchiveModel?> getArchiveDetail(String archiveId) async {
     if (!SupabaseConfig.isInitialized) {
-      return _mockArchives.firstWhere(
+      return _inMemoryArchives.firstWhere(
         (a) => a.id == archiveId,
-        orElse: () => _mockArchives.first,
+        orElse: () => _inMemoryArchives.first,
       );
     }
 

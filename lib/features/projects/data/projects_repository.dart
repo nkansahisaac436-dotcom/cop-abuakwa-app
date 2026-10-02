@@ -12,7 +12,11 @@ abstract class ProjectsRepository {
     ProjectStatus? status,
     bool onlyPublic = false,
   });
-  Future<ProjectModel> createProject(ProjectModel project);
+  Future<ProjectModel> createProject(
+    ProjectModel project, {
+    List<Uint8List> mediaBytes = const [],
+    List<String> captions = const [],
+  });
   Future<ProjectModel> updateProject(ProjectModel project);
   Future<List<ProjectUpdateModel>> getProjectUpdates(String projectId);
   Future<ProjectUpdateModel> addProjectUpdate({
@@ -21,6 +25,8 @@ abstract class ProjectsRepository {
     required int progressPct,
     required String createdBy,
     required String authorName,
+    List<Uint8List> mediaBytes = const [],
+    List<String> captions = const [],
   });
 }
 
@@ -31,89 +37,14 @@ class SupabaseProjectsRepository implements ProjectsRepository {
 
   SupabaseClient get _sb => _client ?? SupabaseConfig.client;
 
-  static final List<ProjectModel> _mockProjects = [
-    ProjectModel(
-      id: 'proj-1',
-      districtId: 'd0000000-0000-0000-0000-000000000002',
-      districtName: 'Abuakwa North',
-      assemblyId: 'a-5',
-      assemblyName: 'Peniel Assembly',
-      title: 'Peniel Mission House Construction',
-      description: 'Building a permanent 4-bedroom mission house for the local assembly minister.',
-      type: ProjectType.project,
-      status: ProjectStatus.ongoing,
-      progressPct: 65,
-      lat: 6.7020,
-      lng: -1.7250,
-      startDate: DateTime(2025, 4, 1),
-      endDate: DateTime(2026, 12, 31),
-      visibility: VisibilityLevel.members,
-      createdBy: 'mock-pastor-id',
-      authorName: 'Pastor Enoch Agyemang',
-      createdAt: DateTime(2025, 4, 1),
-    ),
-    ProjectModel(
-      id: 'proj-2',
-      districtId: 'd0000000-0000-0000-0000-000000000004',
-      districtName: 'Tanoso',
-      assemblyId: 'a-9',
-      assemblyName: 'Tanoso Central Assembly',
-      title: 'Youth Chapel Auditorium Expansion',
-      description: 'Modernizing and expanding the youth auditorium seating capacity from 200 to 500.',
-      type: ProjectType.project,
-      status: ProjectStatus.ongoing,
-      progressPct: 40,
-      lat: 6.6950,
-      lng: -1.7080,
-      startDate: DateTime(2026, 1, 10),
-      endDate: DateTime(2026, 11, 30),
-      visibility: VisibilityLevel.public,
-      createdBy: 'mock-pastor-2',
-      authorName: 'Pastor Samuel Appiah',
-      createdAt: DateTime(2026, 1, 10),
-    ),
-    ProjectModel(
-      id: 'proj-3',
-      districtId: 'd0000000-0000-0000-0000-000000000005',
-      districtName: 'Akropong',
-      assemblyId: 'a-11',
-      assemblyName: 'Akropong Central Assembly',
-      title: 'Community Clean Water Borehole Project',
-      description: 'Drilling an industrial mechanized borehole to serve the church premises and neighboring community.',
-      type: ProjectType.project,
-      status: ProjectStatus.completed,
-      progressPct: 100,
-      lat: 6.7150,
-      lng: -1.7450,
-      startDate: DateTime(2025, 8, 1),
-      endDate: DateTime(2026, 2, 20),
-      visibility: VisibilityLevel.public,
-      createdBy: 'mock-pastor-3',
-      authorName: 'Pastor David Mensah',
-      createdAt: DateTime(2025, 8, 1),
-    ),
-  ];
+  // In-memory runtime storage for offline / mock testing (starts empty)
+  static final List<ProjectModel> _inMemoryProjects = [];
+  static final List<ProjectUpdateModel> _inMemoryUpdates = [];
 
-  static final List<ProjectUpdateModel> _mockUpdates = [
-    ProjectUpdateModel(
-      id: 'up-1',
-      projectId: 'proj-1',
-      note: 'Roofing and electrical piping completed. Plastering in progress.',
-      progressPct: 65,
-      createdBy: 'mock-pastor-id',
-      authorName: 'Pastor Enoch Agyemang',
-      createdAt: DateTime.now().subtract(const Duration(days: 5)),
-    ),
-    ProjectUpdateModel(
-      id: 'up-2',
-      projectId: 'proj-1',
-      note: 'Lintel level reached and cured. Preparing for wooden truss fabrication.',
-      progressPct: 45,
-      createdBy: 'mock-pastor-id',
-      authorName: 'Pastor Enoch Agyemang',
-      createdAt: DateTime.now().subtract(const Duration(days: 35)),
-    ),
-  ];
+  static void resetState() {
+    _inMemoryProjects.clear();
+    _inMemoryUpdates.clear();
+  }
 
   @override
   Future<List<ProjectModel>> getProjects({
@@ -123,7 +54,7 @@ class SupabaseProjectsRepository implements ProjectsRepository {
     bool onlyPublic = false,
   }) async {
     if (!SupabaseConfig.isInitialized) {
-      return _mockProjects.where((p) {
+      return _inMemoryProjects.where((p) {
         if (districtId != null && p.districtId != districtId) return false;
         if (status != null && p.status != status) return false;
         if (onlyPublic) return p.visibility == VisibilityLevel.public;
@@ -138,7 +69,9 @@ class SupabaseProjectsRepository implements ProjectsRepository {
     }
 
     try {
-      var query = _sb.from('projects').select('*, districts(name), assemblies(name)');
+      var query = _sb.from('projects').select(
+        '*, districts(name), assemblies(name), profiles:created_by(full_name, role, avatar_url)',
+      );
       if (districtId != null) query = query.eq('district_id', districtId);
       if (status != null) query = query.eq('status', status.value);
       if (onlyPublic) query = query.eq('visibility', 'public');
@@ -147,37 +80,108 @@ class SupabaseProjectsRepository implements ProjectsRepository {
       return (res as List).map((j) {
         final distName = j['districts'] != null ? j['districts']['name'] as String? : null;
         final assName = j['assemblies'] != null ? j['assemblies']['name'] as String? : null;
+        final profile = j['profiles'] as Map<String, dynamic>?;
+
         final map = Map<String, dynamic>.from(j);
         map['district_name'] = distName;
         map['assembly_name'] = assName;
+        if (profile != null) {
+          map['author_name'] = profile['full_name'];
+          map['author_role'] = profile['role'];
+          map['author_avatar_url'] = profile['avatar_url'];
+        }
         return ProjectModel.fromJson(map);
       }).toList();
     } catch (e) {
       debugPrint('[ProjectsRepository] Error fetching projects: $e');
-      return _mockProjects;
+      return _inMemoryProjects;
     }
   }
 
   @override
-  Future<ProjectModel> createProject(ProjectModel project) async {
-    _mockProjects.insert(0, project);
+  Future<ProjectModel> createProject(
+    ProjectModel project, {
+    List<Uint8List> mediaBytes = const [],
+    List<String> captions = const [],
+  }) async {
+    final photoUrls = List<String>.from(project.photoUrls);
+
+    if (SupabaseConfig.isInitialized && mediaBytes.isNotEmpty && project.createdBy != null) {
+      for (int i = 0; i < mediaBytes.length; i++) {
+        try {
+          final fileName = 'projects/${project.createdBy}/${DateTime.now().millisecondsSinceEpoch}_$i.jpg';
+          await _sb.storage.from('post_media').uploadBinary(
+            fileName,
+            mediaBytes[i],
+            fileOptions: const FileOptions(contentType: 'image/jpeg', upsert: true),
+          );
+          final signedUrl = await _sb.storage.from('post_media').createSignedUrl(fileName, 60 * 60 * 24 * 365);
+          photoUrls.add(signedUrl);
+        } catch (e) {
+          debugPrint('[ProjectsRepository] Error uploading project photo: $e');
+        }
+      }
+    }
+
+    final toSave = ProjectModel(
+      id: project.id,
+      districtId: project.districtId,
+      districtName: project.districtName,
+      assemblyId: project.assemblyId,
+      assemblyName: project.assemblyName,
+      tenureId: project.tenureId,
+      title: project.title,
+      description: project.description,
+      type: project.type,
+      status: project.status,
+      progressPct: project.progressPct,
+      lat: project.lat,
+      lng: project.lng,
+      startDate: project.startDate,
+      endDate: project.endDate,
+      visibility: project.visibility,
+      createdBy: project.createdBy,
+      authorName: project.authorName,
+      authorRole: project.authorRole,
+      authorAvatarUrl: project.authorAvatarUrl,
+      photoUrls: photoUrls,
+      createdAt: project.createdAt,
+    );
+
+    _inMemoryProjects.insert(0, toSave);
 
     if (SupabaseConfig.isInitialized) {
       try {
-        final res = await _sb.from('projects').insert(project.toJson()).select().single();
+        final res = await _sb.from('projects').insert(toSave.toJson()).select().single();
+        final actualId = res['id'] as String;
+
+        // Insert media rows
+        for (int i = 0; i < photoUrls.length; i++) {
+          final cap = i < captions.length ? captions[i] : null;
+          await _sb.from('media').insert({
+            'owner_type': 'project',
+            'owner_id': actualId,
+            'url': photoUrls[i],
+            'caption': cap,
+            'sort_order': i,
+            'created_by': project.createdBy,
+          });
+        }
+
         return ProjectModel.fromJson(res);
       } catch (e) {
         debugPrint('[ProjectsRepository] Error creating project: $e');
+        rethrow;
       }
     }
-    return project;
+    return toSave;
   }
 
   @override
   Future<ProjectModel> updateProject(ProjectModel project) async {
-    final idx = _mockProjects.indexWhere((p) => p.id == project.id);
+    final idx = _inMemoryProjects.indexWhere((p) => p.id == project.id);
     if (idx != -1) {
-      _mockProjects[idx] = project;
+      _inMemoryProjects[idx] = project;
     }
 
     if (SupabaseConfig.isInitialized) {
@@ -193,7 +197,7 @@ class SupabaseProjectsRepository implements ProjectsRepository {
   @override
   Future<List<ProjectUpdateModel>> getProjectUpdates(String projectId) async {
     if (!SupabaseConfig.isInitialized) {
-      return _mockUpdates.where((u) => u.projectId == projectId).toList();
+      return _inMemoryUpdates.where((u) => u.projectId == projectId).toList();
     }
     try {
       final res = await _sb
@@ -210,7 +214,7 @@ class SupabaseProjectsRepository implements ProjectsRepository {
       }).toList();
     } catch (e) {
       debugPrint('[ProjectsRepository] Error fetching updates: $e');
-      return _mockUpdates.where((u) => u.projectId == projectId).toList();
+      return _inMemoryUpdates.where((u) => u.projectId == projectId).toList();
     }
   }
 
@@ -221,9 +225,12 @@ class SupabaseProjectsRepository implements ProjectsRepository {
     required int progressPct,
     required String createdBy,
     required String authorName,
+    List<Uint8List> mediaBytes = const [],
+    List<String> captions = const [],
   }) async {
+    final updateId = 'up-${DateTime.now().millisecondsSinceEpoch}';
     final newUpdate = ProjectUpdateModel(
-      id: 'up-${DateTime.now().millisecondsSinceEpoch}',
+      id: updateId,
       projectId: projectId,
       note: note.trim(),
       progressPct: progressPct,
@@ -232,13 +239,13 @@ class SupabaseProjectsRepository implements ProjectsRepository {
       createdAt: DateTime.now(),
     );
 
-    _mockUpdates.insert(0, newUpdate);
+    _inMemoryUpdates.insert(0, newUpdate);
 
-    // Update parent project progress percentage
-    final projIdx = _mockProjects.indexWhere((p) => p.id == projectId);
+    // Update parent project progress percentage in mock
+    final projIdx = _inMemoryProjects.indexWhere((p) => p.id == projectId);
     if (projIdx != -1) {
-      final old = _mockProjects[projIdx];
-      _mockProjects[projIdx] = ProjectModel(
+      final old = _inMemoryProjects[projIdx];
+      _inMemoryProjects[projIdx] = ProjectModel(
         id: old.id,
         districtId: old.districtId,
         districtName: old.districtName,
@@ -257,6 +264,8 @@ class SupabaseProjectsRepository implements ProjectsRepository {
         visibility: old.visibility,
         createdBy: old.createdBy,
         authorName: old.authorName,
+        authorRole: old.authorRole,
+        authorAvatarUrl: old.authorAvatarUrl,
         photoUrls: old.photoUrls,
         createdAt: old.createdAt,
       );
@@ -264,11 +273,35 @@ class SupabaseProjectsRepository implements ProjectsRepository {
 
     if (SupabaseConfig.isInitialized) {
       try {
-        await _sb.from('project_updates').insert(newUpdate.toJson());
+        final inserted = await _sb.from('project_updates').insert(newUpdate.toJson()).select().single();
+        final actualUpdateId = inserted['id'] as String;
+
         await _sb.from('projects').update({
           'progress_pct': progressPct,
           if (progressPct >= 100) 'status': 'completed',
         }).eq('id', projectId);
+
+        // Upload any media
+        for (int i = 0; i < mediaBytes.length; i++) {
+          final fileName = 'updates/$createdBy/${DateTime.now().millisecondsSinceEpoch}_$i.jpg';
+          await _sb.storage.from('post_media').uploadBinary(
+            fileName,
+            mediaBytes[i],
+            fileOptions: const FileOptions(contentType: 'image/jpeg', upsert: true),
+          );
+          final signedUrl = await _sb.storage.from('post_media').createSignedUrl(fileName, 60 * 60 * 24 * 365);
+          final cap = i < captions.length ? captions[i] : null;
+
+          await _sb.from('media').insert({
+            'update_id': actualUpdateId,
+            'owner_type': 'project_update',
+            'owner_id': actualUpdateId,
+            'url': signedUrl,
+            'caption': cap,
+            'sort_order': i,
+            'created_by': createdBy,
+          });
+        }
       } catch (e) {
         debugPrint('[ProjectsRepository] Error saving update: $e');
       }
