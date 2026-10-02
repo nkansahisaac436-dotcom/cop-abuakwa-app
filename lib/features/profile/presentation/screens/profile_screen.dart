@@ -212,11 +212,11 @@ class ProfileScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 8),
-            Container(
-              decoration: BoxDecoration(
-                color: AppColors.white,
+            Material(
+              color: AppColors.white,
+              shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.border),
+                side: const BorderSide(color: AppColors.border),
               ),
               child: Column(
                 children: [

@@ -176,11 +176,11 @@ class _DistrictsActivationScreenState extends ConsumerState<DistrictsActivationS
                           final district = filteredDistricts[index];
                           final isActive = district.isActive;
 
-                          return Container(
-                            decoration: BoxDecoration(
-                              color: AppColors.white,
+                          return Material(
+                            color: AppColors.white,
+                            shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(14),
-                              border: Border.all(
+                              side: BorderSide(
                                 color: isActive ? AppColors.border : AppColors.warningBorder.withValues(alpha: 0.6),
                                 width: 1.2,
                               ),
