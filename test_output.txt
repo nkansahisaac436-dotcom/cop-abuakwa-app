@@ -1,0 +1,286 @@
+00:00 +0: loading /home/runner/work/cop-abuakwa-app/cop-abuakwa-app/test/widget_test.dart
+00:00 +0: /home/runner/work/cop-abuakwa-app/cop-abuakwa-app/test/widget_test.dart: (setUpAll)
+00:00 +0: /home/runner/work/cop-abuakwa-app/cop-abuakwa-app/test/widget_test.dart: Initial app renders login screen with app title
+00:00 +1: /home/runner/work/cop-abuakwa-app/cop-abuakwa-app/test/widget_test.dart: Initial app renders login screen with app title
+00:00 +2: /home/runner/work/cop-abuakwa-app/cop-abuakwa-app/test/widget_test.dart: Initial app renders login screen with app title
+00:00 +3: /home/runner/work/cop-abuakwa-app/cop-abuakwa-app/test/widget_test.dart: Initial app renders login screen with app title
+00:00 +4: /home/runner/work/cop-abuakwa-app/cop-abuakwa-app/test/widget_test.dart: Initial app renders login screen with app title
+00:00 +5: /home/runner/work/cop-abuakwa-app/cop-abuakwa-app/test/widget_test.dart: Initial app renders login screen with app title
+00:00 +6: /home/runner/work/cop-abuakwa-app/cop-abuakwa-app/test/widget_test.dart: Initial app renders login screen with app title
+00:01 +7: /home/runner/work/cop-abuakwa-app/cop-abuakwa-app/test/step0_setup_test.dart: DistrictRingLogo renders without errors
+00:01 +8: /home/runner/work/cop-abuakwa-app/cop-abuakwa-app/test/step0_setup_test.dart: WarningBanner displays title and message accurately
+00:01 +9: /home/runner/work/cop-abuakwa-app/cop-abuakwa-app/test/step0_setup_test.dart: (tearDownAll)
+00:01 +9: /home/runner/work/cop-abuakwa-app/cop-abuakwa-app/test/comprehensive_features_test.dart: (setUpAll)
+00:01 +9: /home/runner/work/cop-abuakwa-app/cop-abuakwa-app/test/comprehensive_features_test.dart: Step 2: Login & Sign-up Widget Tests LoginScreen renders 4 role chips and default Member view on 360px viewport
+00:02 +10: /home/runner/work/cop-abuakwa-app/cop-abuakwa-app/test/comprehensive_features_test.dart: Step 2: Login & Sign-up Widget Tests LoginScreen renders and scrolls without overflow on large iPhone (430px)
+00:02 +11: /home/runner/work/cop-abuakwa-app/cop-abuakwa-app/test/comprehensive_features_test.dart: Step 2: Login & Sign-up Widget Tests Two-step invite code flow works cleanly with auto-format, verification, and change code
+00:03 +12: /home/runner/work/cop-abuakwa-app/cop-abuakwa-app/test/comprehensive_features_test.dart: Step 2: Login & Sign-up Widget Tests SignUpScreen renders all required fields
+00:03 +13: /home/runner/work/cop-abuakwa-app/cop-abuakwa-app/test/comprehensive_features_test.dart: Invite Code System & Role Check Unit Tests Verifying invalid invite code throws expected error message
+00:03 +14: /home/runner/work/cop-abuakwa-app/cop-abuakwa-app/test/comprehensive_features_test.dart: Invite Code System & Role Check Unit Tests Redeeming invite initiates account with role and district from invite
+00:03 +15: /home/runner/work/cop-abuakwa-app/cop-abuakwa-app/test/comprehensive_features_test.dart: Invite Code System & Role Check Unit Tests Logging in with mismatched role throws specific error message
+00:03 +16: /home/runner/work/cop-abuakwa-app/cop-abuakwa-app/test/comprehensive_features_test.dart: Invite Code System & Role Check Unit Tests Logging in with wrong password throws invalid credentials message
+00:03 +17: /home/runner/work/cop-abuakwa-app/cop-abuakwa-app/test/comprehensive_features_test.dart: Invite Code System & Role Check Unit Tests Logging in with user that has no profile row throws specific setup error
+00:03 +18: /home/runner/work/cop-abuakwa-app/cop-abuakwa-app/test/comprehensive_features_test.dart: Step 3: All 4 Roles Login & Dashboard Landing Widget Tests Area Head logs in and lands on Area Head Dashboard
+══╡ EXCEPTION CAUGHT BY FLUTTER FRAMEWORK ╞═════════════════════════════════════════════════════════
+The following assertion was thrown:
+ListTile background color or ink splashes may be invisible.
+The ListTile is wrapped in a DecoratedBox that has a background color. Because ListTile paints its
+background and ink splashes on the nearest Material ancestor, this DecoratedBox will hide those
+effects.
+To fix this, wrap the ListTile in its own Material widget, or remove the background color from the
+intermediate DecoratedBox.
+
+ListTile: ListTile(onTap: Closure: () => void)
+DecoratedBox:
+  DecoratedBox(bg: BoxDecoration(color: Color(alpha: 1.0000, red: 1.0000, green: 1.0000, blue: 1.0000, colorSpace: ColorSpace.sRGB), border: Border.all(BorderSide(color: Color(alpha: 1.0000, red: 0.8667, green: 0.8863, blue: 0.9176, colorSpace: ColorSpace.sRGB))), borderRadius: BorderRadius.circular(16.0)))
+════════════════════════════════════════════════════════════════════════════════════════════════════
+══╡ EXCEPTION CAUGHT BY FLUTTER FRAMEWORK ╞═════════════════════════════════════════════════════════
+The following assertion was thrown:
+ListTile background color or ink splashes may be invisible.
+The ListTile is wrapped in a DecoratedBox that has a background color. Because ListTile paints its
+background and ink splashes on the nearest Material ancestor, this DecoratedBox will hide those
+effects.
+To fix this, wrap the ListTile in its own Material widget, or remove the background color from the
+intermediate DecoratedBox.
+
+ListTile: ListTile(onTap: Closure: () => void)
+DecoratedBox:
+  DecoratedBox(bg: BoxDecoration(color: Color(alpha: 1.0000, red: 1.0000, green: 1.0000, blue: 1.0000, colorSpace: ColorSpace.sRGB), border: Border.all(BorderSide(color: Color(alpha: 1.0000, red: 0.8667, green: 0.8863, blue: 0.9176, colorSpace: ColorSpace.sRGB))), borderRadius: BorderRadius.circular(16.0)))
+════════════════════════════════════════════════════════════════════════════════════════════════════
+══╡ EXCEPTION CAUGHT BY FLUTTER FRAMEWORK ╞═════════════════════════════════════════════════════════
+The following assertion was thrown:
+ListTile background color or ink splashes may be invisible.
+The ListTile is wrapped in a DecoratedBox that has a background color. Because ListTile paints its
+background and ink splashes on the nearest Material ancestor, this DecoratedBox will hide those
+effects.
+To fix this, wrap the ListTile in its own Material widget, or remove the background color from the
+intermediate DecoratedBox.
+
+ListTile: ListTile(onTap: Closure: () => void)
+DecoratedBox:
+  DecoratedBox(bg: BoxDecoration(color: Color(alpha: 1.0000, red: 1.0000, green: 1.0000, blue: 1.0000, colorSpace: ColorSpace.sRGB), border: Border.all(BorderSide(color: Color(alpha: 1.0000, red: 0.8667, green: 0.8863, blue: 0.9176, colorSpace: ColorSpace.sRGB))), borderRadius: BorderRadius.circular(16.0)))
+════════════════════════════════════════════════════════════════════════════════════════════════════
+══╡ EXCEPTION CAUGHT BY FLUTTER FRAMEWORK ╞═════════════════════════════════════════════════════════
+The following assertion was thrown:
+ListTile background color or ink splashes may be invisible.
+The ListTile is wrapped in a DecoratedBox that has a background color. Because ListTile paints its
+background and ink splashes on the nearest Material ancestor, this DecoratedBox will hide those
+effects.
+To fix this, wrap the ListTile in its own Material widget, or remove the background color from the
+intermediate DecoratedBox.
+
+ListTile: ListTile(onTap: Closure: () => void)
+DecoratedBox:
+  DecoratedBox(bg: BoxDecoration(color: Color(alpha: 1.0000, red: 1.0000, green: 1.0000, blue: 1.0000, colorSpace: ColorSpace.sRGB), border: Border.all(BorderSide(color: Color(alpha: 1.0000, red: 0.8667, green: 0.8863, blue: 0.9176, colorSpace: ColorSpace.sRGB))), borderRadius: BorderRadius.circular(16.0)))
+════════════════════════════════════════════════════════════════════════════════════════════════════
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following message was thrown:
+Multiple exceptions (4) were detected during the running of the current test, and at least one was
+unexpected.
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:04 +18 -1: /home/runner/work/cop-abuakwa-app/cop-abuakwa-app/test/comprehensive_features_test.dart: Step 3: All 4 Roles Login & Dashboard Landing Widget Tests Area Head logs in and lands on Area Head Dashboard [E]
+  Test failed. See exception logs above.
+  The test description was: Area Head logs in and lands on Area Head Dashboard
+  
+00:04 +18 -1: /home/runner/work/cop-abuakwa-app/cop-abuakwa-app/test/comprehensive_features_test.dart: Step 3: All 4 Roles Login & Dashboard Landing Widget Tests Pastor logs in and lands on Pastor Home Screen
+══╡ EXCEPTION CAUGHT BY FLUTTER FRAMEWORK ╞═════════════════════════════════════════════════════════
+The following assertion was thrown:
+ListTile background color or ink splashes may be invisible.
+The ListTile is wrapped in a DecoratedBox that has a background color. Because ListTile paints its
+background and ink splashes on the nearest Material ancestor, this DecoratedBox will hide those
+effects.
+To fix this, wrap the ListTile in its own Material widget, or remove the background color from the
+intermediate DecoratedBox.
+
+ListTile: ListTile(onTap: Closure: () => void)
+DecoratedBox:
+  DecoratedBox(bg: BoxDecoration(color: Color(alpha: 1.0000, red: 1.0000, green: 1.0000, blue: 1.0000, colorSpace: ColorSpace.sRGB), border: Border.all(BorderSide(color: Color(alpha: 1.0000, red: 0.8667, green: 0.8863, blue: 0.9176, colorSpace: ColorSpace.sRGB))), borderRadius: BorderRadius.circular(16.0)))
+════════════════════════════════════════════════════════════════════════════════════════════════════
+══╡ EXCEPTION CAUGHT BY FLUTTER FRAMEWORK ╞═════════════════════════════════════════════════════════
+The following assertion was thrown:
+ListTile background color or ink splashes may be invisible.
+The ListTile is wrapped in a DecoratedBox that has a background color. Because ListTile paints its
+background and ink splashes on the nearest Material ancestor, this DecoratedBox will hide those
+effects.
+To fix this, wrap the ListTile in its own Material widget, or remove the background color from the
+intermediate DecoratedBox.
+
+ListTile: ListTile(onTap: Closure: () => void)
+DecoratedBox:
+  DecoratedBox(bg: BoxDecoration(color: Color(alpha: 1.0000, red: 1.0000, green: 1.0000, blue: 1.0000, colorSpace: ColorSpace.sRGB), border: Border.all(BorderSide(color: Color(alpha: 1.0000, red: 0.8667, green: 0.8863, blue: 0.9176, colorSpace: ColorSpace.sRGB))), borderRadius: BorderRadius.circular(16.0)))
+════════════════════════════════════════════════════════════════════════════════════════════════════
+══╡ EXCEPTION CAUGHT BY FLUTTER FRAMEWORK ╞═════════════════════════════════════════════════════════
+The following assertion was thrown:
+ListTile background color or ink splashes may be invisible.
+The ListTile is wrapped in a DecoratedBox that has a background color. Because ListTile paints its
+background and ink splashes on the nearest Material ancestor, this DecoratedBox will hide those
+effects.
+To fix this, wrap the ListTile in its own Material widget, or remove the background color from the
+intermediate DecoratedBox.
+
+ListTile: ListTile(onTap: Closure: () => void)
+DecoratedBox:
+  DecoratedBox(bg: BoxDecoration(color: Color(alpha: 1.0000, red: 1.0000, green: 1.0000, blue: 1.0000, colorSpace: ColorSpace.sRGB), border: Border.all(BorderSide(color: Color(alpha: 1.0000, red: 0.8667, green: 0.8863, blue: 0.9176, colorSpace: ColorSpace.sRGB))), borderRadius: BorderRadius.circular(16.0)))
+════════════════════════════════════════════════════════════════════════════════════════════════════
+══╡ EXCEPTION CAUGHT BY FLUTTER FRAMEWORK ╞═════════════════════════════════════════════════════════
+The following assertion was thrown:
+ListTile background color or ink splashes may be invisible.
+The ListTile is wrapped in a DecoratedBox that has a background color. Because ListTile paints its
+background and ink splashes on the nearest Material ancestor, this DecoratedBox will hide those
+effects.
+To fix this, wrap the ListTile in its own Material widget, or remove the background color from the
+intermediate DecoratedBox.
+
+ListTile: ListTile(onTap: Closure: () => void)
+DecoratedBox:
+  DecoratedBox(bg: BoxDecoration(color: Color(alpha: 1.0000, red: 1.0000, green: 1.0000, blue: 1.0000, colorSpace: ColorSpace.sRGB), border: Border.all(BorderSide(color: Color(alpha: 1.0000, red: 0.8667, green: 0.8863, blue: 0.9176, colorSpace: ColorSpace.sRGB))), borderRadius: BorderRadius.circular(16.0)))
+════════════════════════════════════════════════════════════════════════════════════════════════════
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following message was thrown:
+Multiple exceptions (4) were detected during the running of the current test, and at least one was
+unexpected.
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:04 +18 -2: /home/runner/work/cop-abuakwa-app/cop-abuakwa-app/test/comprehensive_features_test.dart: Step 3: All 4 Roles Login & Dashboard Landing Widget Tests Pastor logs in and lands on Pastor Home Screen [E]
+  Test failed. See exception logs above.
+  The test description was: Pastor logs in and lands on Pastor Home Screen
+  
+00:04 +18 -2: /home/runner/work/cop-abuakwa-app/cop-abuakwa-app/test/comprehensive_features_test.dart: Step 3: All 4 Roles Login & Dashboard Landing Widget Tests Ministry Leader logs in and lands on Leader Home Screen
+══╡ EXCEPTION CAUGHT BY FLUTTER FRAMEWORK ╞═════════════════════════════════════════════════════════
+The following assertion was thrown:
+ListTile background color or ink splashes may be invisible.
+The ListTile is wrapped in a DecoratedBox that has a background color. Because ListTile paints its
+background and ink splashes on the nearest Material ancestor, this DecoratedBox will hide those
+effects.
+To fix this, wrap the ListTile in its own Material widget, or remove the background color from the
+intermediate DecoratedBox.
+
+ListTile: ListTile(onTap: Closure: () => void)
+DecoratedBox:
+  DecoratedBox(bg: BoxDecoration(color: Color(alpha: 1.0000, red: 1.0000, green: 1.0000, blue: 1.0000, colorSpace: ColorSpace.sRGB), border: Border.all(BorderSide(color: Color(alpha: 1.0000, red: 0.8667, green: 0.8863, blue: 0.9176, colorSpace: ColorSpace.sRGB))), borderRadius: BorderRadius.circular(16.0)))
+════════════════════════════════════════════════════════════════════════════════════════════════════
+══╡ EXCEPTION CAUGHT BY FLUTTER FRAMEWORK ╞═════════════════════════════════════════════════════════
+The following assertion was thrown:
+ListTile background color or ink splashes may be invisible.
+The ListTile is wrapped in a DecoratedBox that has a background color. Because ListTile paints its
+background and ink splashes on the nearest Material ancestor, this DecoratedBox will hide those
+effects.
+To fix this, wrap the ListTile in its own Material widget, or remove the background color from the
+intermediate DecoratedBox.
+
+ListTile: ListTile(onTap: Closure: () => void)
+DecoratedBox:
+  DecoratedBox(bg: BoxDecoration(color: Color(alpha: 1.0000, red: 1.0000, green: 1.0000, blue: 1.0000, colorSpace: ColorSpace.sRGB), border: Border.all(BorderSide(color: Color(alpha: 1.0000, red: 0.8667, green: 0.8863, blue: 0.9176, colorSpace: ColorSpace.sRGB))), borderRadius: BorderRadius.circular(16.0)))
+════════════════════════════════════════════════════════════════════════════════════════════════════
+══╡ EXCEPTION CAUGHT BY FLUTTER FRAMEWORK ╞═════════════════════════════════════════════════════════
+The following assertion was thrown:
+ListTile background color or ink splashes may be invisible.
+The ListTile is wrapped in a DecoratedBox that has a background color. Because ListTile paints its
+background and ink splashes on the nearest Material ancestor, this DecoratedBox will hide those
+effects.
+To fix this, wrap the ListTile in its own Material widget, or remove the background color from the
+intermediate DecoratedBox.
+
+ListTile: ListTile(onTap: Closure: () => void)
+DecoratedBox:
+  DecoratedBox(bg: BoxDecoration(color: Color(alpha: 1.0000, red: 1.0000, green: 1.0000, blue: 1.0000, colorSpace: ColorSpace.sRGB), border: Border.all(BorderSide(color: Color(alpha: 1.0000, red: 0.8667, green: 0.8863, blue: 0.9176, colorSpace: ColorSpace.sRGB))), borderRadius: BorderRadius.circular(16.0)))
+════════════════════════════════════════════════════════════════════════════════════════════════════
+══╡ EXCEPTION CAUGHT BY FLUTTER FRAMEWORK ╞═════════════════════════════════════════════════════════
+The following assertion was thrown:
+ListTile background color or ink splashes may be invisible.
+The ListTile is wrapped in a DecoratedBox that has a background color. Because ListTile paints its
+background and ink splashes on the nearest Material ancestor, this DecoratedBox will hide those
+effects.
+To fix this, wrap the ListTile in its own Material widget, or remove the background color from the
+intermediate DecoratedBox.
+
+ListTile: ListTile(onTap: Closure: () => void)
+DecoratedBox:
+  DecoratedBox(bg: BoxDecoration(color: Color(alpha: 1.0000, red: 1.0000, green: 1.0000, blue: 1.0000, colorSpace: ColorSpace.sRGB), border: Border.all(BorderSide(color: Color(alpha: 1.0000, red: 0.8667, green: 0.8863, blue: 0.9176, colorSpace: ColorSpace.sRGB))), borderRadius: BorderRadius.circular(16.0)))
+════════════════════════════════════════════════════════════════════════════════════════════════════
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following message was thrown:
+Multiple exceptions (4) were detected during the running of the current test, and at least one was
+unexpected.
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:04 +18 -3: /home/runner/work/cop-abuakwa-app/cop-abuakwa-app/test/comprehensive_features_test.dart: Step 3: All 4 Roles Login & Dashboard Landing Widget Tests Ministry Leader logs in and lands on Leader Home Screen [E]
+  Test failed. See exception logs above.
+  The test description was: Ministry Leader logs in and lands on Leader Home Screen
+  
+00:04 +18 -3: /home/runner/work/cop-abuakwa-app/cop-abuakwa-app/test/comprehensive_features_test.dart: Step 3: All 4 Roles Login & Dashboard Landing Widget Tests Member logs in and lands on Member Feed Screen
+══╡ EXCEPTION CAUGHT BY FLUTTER FRAMEWORK ╞═════════════════════════════════════════════════════════
+The following assertion was thrown:
+ListTile background color or ink splashes may be invisible.
+The ListTile is wrapped in a DecoratedBox that has a background color. Because ListTile paints its
+background and ink splashes on the nearest Material ancestor, this DecoratedBox will hide those
+effects.
+To fix this, wrap the ListTile in its own Material widget, or remove the background color from the
+intermediate DecoratedBox.
+
+ListTile: ListTile(onTap: Closure: () => void)
+DecoratedBox:
+  DecoratedBox(bg: BoxDecoration(color: Color(alpha: 1.0000, red: 1.0000, green: 1.0000, blue: 1.0000, colorSpace: ColorSpace.sRGB), border: Border.all(BorderSide(color: Color(alpha: 1.0000, red: 0.8667, green: 0.8863, blue: 0.9176, colorSpace: ColorSpace.sRGB))), borderRadius: BorderRadius.circular(16.0)))
+════════════════════════════════════════════════════════════════════════════════════════════════════
+══╡ EXCEPTION CAUGHT BY FLUTTER FRAMEWORK ╞═════════════════════════════════════════════════════════
+The following assertion was thrown:
+ListTile background color or ink splashes may be invisible.
+The ListTile is wrapped in a DecoratedBox that has a background color. Because ListTile paints its
+background and ink splashes on the nearest Material ancestor, this DecoratedBox will hide those
+effects.
+To fix this, wrap the ListTile in its own Material widget, or remove the background color from the
+intermediate DecoratedBox.
+
+ListTile: ListTile(onTap: Closure: () => void)
+DecoratedBox:
+  DecoratedBox(bg: BoxDecoration(color: Color(alpha: 1.0000, red: 1.0000, green: 1.0000, blue: 1.0000, colorSpace: ColorSpace.sRGB), border: Border.all(BorderSide(color: Color(alpha: 1.0000, red: 0.8667, green: 0.8863, blue: 0.9176, colorSpace: ColorSpace.sRGB))), borderRadius: BorderRadius.circular(16.0)))
+════════════════════════════════════════════════════════════════════════════════════════════════════
+══╡ EXCEPTION CAUGHT BY FLUTTER FRAMEWORK ╞═════════════════════════════════════════════════════════
+The following assertion was thrown:
+ListTile background color or ink splashes may be invisible.
+The ListTile is wrapped in a DecoratedBox that has a background color. Because ListTile paints its
+background and ink splashes on the nearest Material ancestor, this DecoratedBox will hide those
+effects.
+To fix this, wrap the ListTile in its own Material widget, or remove the background color from the
+intermediate DecoratedBox.
+
+ListTile: ListTile(onTap: Closure: () => void)
+DecoratedBox:
+  DecoratedBox(bg: BoxDecoration(color: Color(alpha: 1.0000, red: 1.0000, green: 1.0000, blue: 1.0000, colorSpace: ColorSpace.sRGB), border: Border.all(BorderSide(color: Color(alpha: 1.0000, red: 0.8667, green: 0.8863, blue: 0.9176, colorSpace: ColorSpace.sRGB))), borderRadius: BorderRadius.circular(16.0)))
+════════════════════════════════════════════════════════════════════════════════════════════════════
+══╡ EXCEPTION CAUGHT BY FLUTTER FRAMEWORK ╞═════════════════════════════════════════════════════════
+The following assertion was thrown:
+ListTile background color or ink splashes may be invisible.
+The ListTile is wrapped in a DecoratedBox that has a background color. Because ListTile paints its
+background and ink splashes on the nearest Material ancestor, this DecoratedBox will hide those
+effects.
+To fix this, wrap the ListTile in its own Material widget, or remove the background color from the
+intermediate DecoratedBox.
+
+ListTile: ListTile(onTap: Closure: () => void)
+DecoratedBox:
+  DecoratedBox(bg: BoxDecoration(color: Color(alpha: 1.0000, red: 1.0000, green: 1.0000, blue: 1.0000, colorSpace: ColorSpace.sRGB), border: Border.all(BorderSide(color: Color(alpha: 1.0000, red: 0.8667, green: 0.8863, blue: 0.9176, colorSpace: ColorSpace.sRGB))), borderRadius: BorderRadius.circular(16.0)))
+════════════════════════════════════════════════════════════════════════════════════════════════════
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following message was thrown:
+Multiple exceptions (4) were detected during the running of the current test, and at least one was
+unexpected.
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:05 +18 -4: /home/runner/work/cop-abuakwa-app/cop-abuakwa-app/test/comprehensive_features_test.dart: Step 3: All 4 Roles Login & Dashboard Landing Widget Tests Member logs in and lands on Member Feed Screen [E]
+  Test failed. See exception logs above.
+  The test description was: Member logs in and lands on Member Feed Screen
+  
+00:05 +18 -4: /home/runner/work/cop-abuakwa-app/cop-abuakwa-app/test/comprehensive_features_test.dart: Step 3: All 4 Roles Login & Dashboard Landing Widget Tests Wrong password shows visible error banner and stays on LoginScreen
+00:05 +19 -4: /home/runner/work/cop-abuakwa-app/cop-abuakwa-app/test/comprehensive_features_test.dart: Step 3: All 4 Roles Login & Dashboard Landing Widget Tests Wrong role chip shows specific role mismatch error banner
+00:05 +20 -4: /home/runner/work/cop-abuakwa-app/cop-abuakwa-app/test/comprehensive_features_test.dart: Step 3: All 4 Roles Login & Dashboard Landing Widget Tests User with no profile row shows specific not set up error banner
+00:05 +21 -4: /home/runner/work/cop-abuakwa-app/cop-abuakwa-app/test/comprehensive_features_test.dart: Step 4: Transfer Archive & Title Format Tests Archive title follows exact "Pastor <Full Name>, <startYear>-<endYear>" pattern
+00:05 +22 -4: /home/runner/work/cop-abuakwa-app/cop-abuakwa-app/test/comprehensive_features_test.dart: Step 4: Transfer Archive & Title Format Tests PDF Generator generates non-empty document bytes
+Helvetica-Bold has no Unicode support see https://github.com/DavBfr/dart_pdf/wiki/Fonts-Management
+Helvetica has no Unicode support see https://github.com/DavBfr/dart_pdf/wiki/Fonts-Management
+00:05 +23 -4: /home/runner/work/cop-abuakwa-app/cop-abuakwa-app/test/comprehensive_features_test.dart: Step 5: Meetings Repository Tests Jitsi room link includes audio-only and muted video flags
+00:05 +24 -4: /home/runner/work/cop-abuakwa-app/cop-abuakwa-app/test/comprehensive_features_test.dart: (tearDownAll)
+00:05 +24 -4: Some tests failed.
+
+Failing tests:
+  /home/runner/work/cop-abuakwa-app/cop-abuakwa-app/test/comprehensive_features_test.dart: Step 3: All 4 Roles Login & Dashboard Landing Widget Tests Area Head logs in and lands on Area Head Dashboard
+  /home/runner/work/cop-abuakwa-app/cop-abuakwa-app/test/comprehensive_features_test.dart: Step 3: All 4 Roles Login & Dashboard Landing Widget Tests Member logs in and lands on Member Feed Screen
+  /home/runner/work/cop-abuakwa-app/cop-abuakwa-app/test/comprehensive_features_test.dart: Step 3: All 4 Roles Login & Dashboard Landing Widget Tests Ministry Leader logs in and lands on Leader Home Screen
+  /home/runner/work/cop-abuakwa-app/cop-abuakwa-app/test/comprehensive_features_test.dart: Step 3: All 4 Roles Login & Dashboard Landing Widget Tests Pastor logs in and lands on Pastor Home Screen
