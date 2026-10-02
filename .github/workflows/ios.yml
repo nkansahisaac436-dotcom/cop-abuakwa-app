@@ -31,4 +31,13 @@ jobs:
         run: flutter analyze
 
       - name: Run Tests
-        run: flutter test --reporter=expanded
+        run: |
+          set +e
+          flutter test --reporter=expanded > test_output.txt 2>&1
+          TEST_EXIT_CODE=$?
+          cat test_output.txt
+          echo "### Flutter Test Output" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          cat test_output.txt >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          exit $TEST_EXIT_CODE
