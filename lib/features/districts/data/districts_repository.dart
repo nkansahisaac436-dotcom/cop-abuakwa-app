@@ -26,6 +26,10 @@ abstract class DistrictsRepository {
     required String name,
     required List<String> assemblies,
   });
+  Future<AssemblyModel> addAssembly({
+    required String districtId,
+    required String name,
+  });
   Future<void> activateDistrict(String districtId, String activatedByUserId);
   Future<void> deactivateDistrict(String districtId);
 }
@@ -355,6 +359,47 @@ class SupabaseDistrictsRepository implements DistrictsRepository {
       return (await getDistrictById(distId))!;
     } catch (e) {
       debugPrint('[DistrictsRepository] Error adding district directly: $e');
+      rethrow;
+    }
+  }
+
+  @override
+  Future<AssemblyModel> addAssembly({
+    required String districtId,
+    required String name,
+  }) async {
+    final cleanName = name.trim();
+    if (cleanName.isEmpty) {
+      throw Exception('Assembly name cannot be empty.');
+    }
+
+    if (!SupabaseConfig.isInitialized) {
+      final newAsm = AssemblyModel(
+        id: 'asm-${DateTime.now().microsecondsSinceEpoch}-$cleanName',
+        districtId: districtId,
+        name: cleanName,
+        createdAt: DateTime.now(),
+      );
+      final currentList = _inMemoryAssemblies[districtId] ?? [];
+      _inMemoryAssemblies[districtId] = [...currentList, newAsm];
+
+      final distIdx = _inMemoryDistricts.indexWhere((d) => d.id == districtId);
+      if (distIdx != -1) {
+        final dist = _inMemoryDistricts[distIdx];
+        final names = <String>[...(dist.assemblyNames ?? []), cleanName];
+        _inMemoryDistricts[distIdx] = dist.copyWith(assemblyNames: names);
+      }
+      return newAsm;
+    }
+
+    try {
+      final res = await _sb.from('assemblies').insert({
+        'district_id': districtId,
+        'name': cleanName,
+      }).select().single();
+      return AssemblyModel.fromJson(res);
+    } catch (e) {
+      debugPrint('[DistrictsRepository] Error adding assembly: $e');
       rethrow;
     }
   }

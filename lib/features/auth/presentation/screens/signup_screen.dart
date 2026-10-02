@@ -128,7 +128,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
             // 1. Navy Header with Back Button and Title
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.only(top: 48, bottom: 32, left: 16, right: 24),
+              padding: const EdgeInsets.only(top: 40, bottom: 28, left: 16, right: 16),
               decoration: const BoxDecoration(
                 gradient: AppColors.navyGradient,
                 borderRadius: BorderRadius.only(
@@ -136,15 +136,29 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                   bottomRight: Radius.circular(28),
                 ),
               ),
-              child: Row(
+              child: Column(
                 children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back, color: AppColors.white),
-                    onPressed: () => Navigator.of(context).pop(),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.arrow_back, color: AppColors.white),
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                      Image.asset(
+                        'assets/images/abuakwa_logo.png',
+                        width: 56,
+                        height: 56,
+                        filterQuality: FilterQuality.high,
+                        semanticLabel: 'Church of Pentecost logo',
+                      ),
+                      const SizedBox(width: 48), // balances the back button
+                    ],
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(height: 10),
                   Text(
                     AppStrings.createYourAccount,
+                    textAlign: TextAlign.center,
                     style: GoogleFonts.sourceSerif4(
                       fontSize: AppDimensions.fontSizeScreenTitle,
                       fontWeight: FontWeight.bold,

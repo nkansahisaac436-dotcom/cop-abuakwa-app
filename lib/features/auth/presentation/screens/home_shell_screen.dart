@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../auth/domain/models/profile_model.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
+import '../../../districts/presentation/providers/districts_provider.dart';
 import '../../../districts/presentation/screens/districts_activation_screen.dart';
 import '../../../feeds/presentation/screens/public_feed_screen.dart';
 import '../../../feeds/presentation/screens/pastor_thoughts_screen.dart';
@@ -147,6 +148,14 @@ class AreaHeadDashboardTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(authStateProvider).value;
+    final districtsAsync = ref.watch(districtsListProvider);
+    final districts = districtsAsync.value ?? [];
+
+    final totalDistricts = districts.length;
+    final activeDistricts = districts.where((d) => d.isActive).length;
+    final pendingDistricts = districts.where((d) => d.isPending).length;
+    final rejectedDistricts = districts.where((d) => d.isRejected).length;
+    final pastorsCount = districts.where((d) => d.registeredBy != null || d.pastorName != null).length;
 
     return Scaffold(
       appBar: AppBar(
@@ -209,7 +218,7 @@ class AreaHeadDashboardTab extends ConsumerWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Welcome, ${user?.fullName ?? "Apostle"}. Supervising ~33 Districts.',
+                    'Welcome, ${user?.fullName ?? "Apostle"}. Supervising $totalDistricts registered districts.',
                     style: GoogleFonts.nunitoSans(
                       fontSize: 13,
                       color: AppColors.lightGold,
@@ -219,6 +228,108 @@ class AreaHeadDashboardTab extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 20),
+
+            // District & Leadership Metrics
+            Text(
+              'District & Leadership Overview',
+              style: GoogleFonts.sourceSerif4(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppColors.navy,
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            Row(
+              children: [
+                Expanded(
+                  child: _buildMetricCard(
+                    context: context,
+                    title: 'Total Districts',
+                    count: '$totalDistricts',
+                    icon: Icons.apartment,
+                    color: AppColors.navy,
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const DistrictsActivationScreen()),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _buildMetricCard(
+                    context: context,
+                    title: 'Active Districts',
+                    count: '$activeDistricts',
+                    icon: Icons.check_circle_outline,
+                    color: AppColors.success,
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const DistrictsActivationScreen()),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+
+            Row(
+              children: [
+                Expanded(
+                  child: _buildMetricCard(
+                    context: context,
+                    title: 'Pending Approval',
+                    count: '$pendingDistricts',
+                    icon: Icons.hourglass_top_rounded,
+                    color: pendingDistricts > 0 ? const Color(0xFFD97706) : AppColors.softGrey,
+                    isAlert: pendingDistricts > 0,
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const DistrictsActivationScreen()),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _buildMetricCard(
+                    context: context,
+                    title: 'Needs Review',
+                    count: '$rejectedDistricts',
+                    icon: Icons.cancel_outlined,
+                    color: rejectedDistricts > 0 ? AppColors.error : AppColors.softGrey,
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const DistrictsActivationScreen()),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+
+            Row(
+              children: [
+                Expanded(
+                  child: _buildMetricCard(
+                    context: context,
+                    title: 'District Pastors',
+                    count: '$pastorsCount',
+                    icon: Icons.people_outline,
+                    color: const Color(0xFF6366F1),
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const DistrictsActivationScreen()),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
 
             // Quick Actions
             Text(
@@ -400,6 +511,77 @@ class AreaHeadDashboardTab extends ConsumerWidget {
                 fontWeight: FontWeight.bold,
                 color: AppColors.text,
                 height: 1.2,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMetricCard({
+    required BuildContext context,
+    required String title,
+    required String count,
+    required IconData icon,
+    required Color color,
+    bool isAlert = false,
+    VoidCallback? onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        decoration: BoxDecoration(
+          color: isAlert ? color.withValues(alpha: 0.08) : AppColors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isAlert ? color : AppColors.border,
+            width: isAlert ? 1.5 : 1.0,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: color, size: 22),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    count,
+                    style: GoogleFonts.sourceSerif4(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: color,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.nunitoSans(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.softGrey,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],

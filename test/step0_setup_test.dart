@@ -5,7 +5,6 @@ import 'package:cop_abuakwa_app/core/constants/app_colors.dart';
 import 'package:cop_abuakwa_app/core/constants/app_strings.dart';
 import 'package:cop_abuakwa_app/core/network/supabase_client.dart';
 import 'package:cop_abuakwa_app/core/theme/app_theme.dart';
-import 'package:cop_abuakwa_app/core/widgets/district_ring_logo.dart';
 import 'package:cop_abuakwa_app/core/widgets/warning_banner.dart';
 
 void main() {
@@ -39,23 +38,23 @@ void main() {
     expect(AppStrings.ministries.length, 5);
   });
 
-  testWidgets('DistrictRingLogo renders without errors', (WidgetTester tester) async {
+  testWidgets('Church logo image asset exists and can be rendered', (WidgetTester tester) async {
     await tester.pumpWidget(
-      const MaterialApp(
+      MaterialApp(
         home: Scaffold(
-          body: DistrictRingLogo(size: 100),
+          body: Image.asset(
+            'assets/images/abuakwa_logo.png',
+            width: 96,
+            height: 96,
+            semanticLabel: 'Church of Pentecost logo',
+          ),
         ),
       ),
     );
 
-    expect(find.byType(DistrictRingLogo), findsOneWidget);
-    expect(
-      find.descendant(
-        of: find.byType(DistrictRingLogo),
-        matching: find.byType(CustomPaint),
-      ),
-      findsOneWidget,
-    );
+    expect(find.byType(Image), findsOneWidget);
+    final image = tester.widget<Image>(find.byType(Image));
+    expect(image.semanticLabel, 'Church of Pentecost logo');
   });
 
   testWidgets('WarningBanner displays title and message accurately', (WidgetTester tester) async {

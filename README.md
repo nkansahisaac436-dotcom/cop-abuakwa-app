@@ -3,14 +3,14 @@
 [![Flutter CI](https://github.com/nkansahisaac436-dotcom/cop-abuakwa-app/actions/workflows/ios.yml/badge.svg)](https://github.com/nkansahisaac436-dotcom/cop-abuakwa-app/actions/workflows/ios.yml)
 [![Deploy Web App to GitHub Pages](https://github.com/nkansahisaac436-dotcom/cop-abuakwa-app/actions/workflows/deploy_web.yml/badge.svg)](https://github.com/nkansahisaac436-dotcom/cop-abuakwa-app/actions/workflows/deploy_web.yml)
 
-**Abuakwa Area Connect** is the official digital administration and community platform for **The Church of Pentecost, Abuakwa Area**, providing centralized oversight, pastoral collaboration, and member engagement across **~33 districts**.
+**Abuakwa Area Connect** is the official digital administration and community platform for **The Church of Pentecost, Abuakwa Area**, providing centralized oversight, pastoral collaboration, and member engagement across dynamically growing districts.
 
 ---
 
 ## 🏛️ Key Roles & Features
 
 ### 1. 👑 Area Head (Executive Oversight)
-- **District Governance & Approval:** Review pastor self-registered districts across Pending, Active, and Rejected tabs with approval/rejection notes, activation toggles, and direct district creation.
+- **District Governance & Approval:** Review pastor self-registered districts across Pending, Active, and Rejected tabs with live metrics (Total, Active, Pending, Rejected, Pastors), approval/rejection notes, activation toggles, and direct district creation.
 - **Invitation Hub:** Generate secure, single-use invite codes (`ABK-XXXX-XX`) for incoming pastors (with optional district assignment) and ministry leaders, with multi-channel sharing (WhatsApp, SMS, clipboard) and active invite cancellation.
 - **Supervisory Logs:** Record on-site supervision visits with location tagging, photos, and leadership notes.
 - **Tenure & Transfer Decisions:** Review transfer requests, approve handovers, and access permanent read-only tenure archives.
@@ -18,6 +18,7 @@
 
 ### 2. 📖 District Pastors
 - **District Self-Registration:** Pastors register their new district, local assemblies list, and tenure start date upon invite activation, awaiting Area Head approval before publishing activities.
+- **Assembly Expansion:** Add new assemblies to their district dynamically at any time (`Pastor > My District > Add Assembly`).
 - **District Projects & Events:** Create and track district infrastructure projects and events with photo attachments, milestone updates, and progress percentages.
 - **Pastoral Thoughts Feed:** Share biblical reflections, devotionals, photo galleries, and pastoral messages with the Area.
 - **Virtual Pastoral Calls:** Instant and scheduled group audio/video calls via integrated Jitsi Meet.
@@ -35,7 +36,7 @@
 - **Area & Ministry Feeds:** Real-time updates with multi-image galleries and swipeable carousels filtered by Row-Level-Security (RLS).
 - **Public Projects & Events:** View public district milestones, chapel builds, and upcoming events with photo updates.
 - **Controlled Sign-Up:** Secure registration restricted to approved, active districts and verified local assemblies (pending districts dynamically greyed out).
-- **Author Attribution:** Safe attribution headers showing avatar, name, role badge, and affiliation with safe modal profile cards (private email and phone hidden).
+- **Author Attribution & Privacy:** Safe attribution headers showing avatar, name, role badge, and affiliation with safe modal profile cards (private email and phone hidden).
 
 ---
 
@@ -43,7 +44,7 @@
 
 - **4-Role Chip Selector:** Member, Pastor, Leader, Area Head.
 - **Two-Step Invite Flow:** Pastors and leaders redeem cryptographic invite codes auto-formatted as `ABK-XXXX-XX`. Includes rate-limiting (15-minute lockout after 5 consecutive failed attempts).
-- **In-App Password Management:** Dedicated "Change Password" dialog on the Profile screen for all authenticated roles.
+- **In-App Password Management & Account Deletion:** Dedicated "Change Password" dialog and "Delete my account" GDPR/privacy option on the Profile screen.
 - **Profile Avatars & Compression:** Client-side smart image compression (1600px for post media, 512px square for avatars) with private storage buckets.
 - **Role Verification Guard:** Strict role matching on sign-in prevents unauthorized privilege escalation.
 
@@ -74,10 +75,10 @@ lib/
 │   ├── network/         # SupabaseClient wrapper with offline/mock fallback
 │   ├── router/          # Declarative GoRouter configuration and route guards
 │   ├── theme/           # Light & Dark theme tokens, typography (Source Serif 4, Nunito Sans)
-│   └── widgets/         # DistrictRingLogo, AppTextField, PrimaryButton, WarningBanner
+│   └── widgets/         # AppTextField, PrimaryButton, WarningBanner, AuthorAttributionHeader
 ├── features/
 │   ├── auth/            # 4-role login, 2-step invite redemption, sign-up, session providers
-│   ├── districts/       # 33 Districts management, assembly lists, activation toggle
+│   ├── districts/       # Dynamic districts management, self-registration, assembly lists, activation toggle
 │   ├── feeds/           # Area feed, pastoral thoughts, create post modal bottom sheet
 │   ├── meetings/        # Pastoral group calls & virtual meeting scheduler
 │   ├── ministries/      # 5 Ministries directory & dedicated ministry feeds

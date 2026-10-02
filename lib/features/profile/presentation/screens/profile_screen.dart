@@ -473,8 +473,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               width: double.infinity,
               child: OutlinedButton.icon(
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.error,
-                  side: const BorderSide(color: AppColors.error),
+                  foregroundColor: AppColors.navy,
+                  side: const BorderSide(color: AppColors.navy),
                   shape: const StadiumBorder(),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
@@ -494,9 +494,75 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 },
               ),
             ),
+            const SizedBox(height: 14),
+
+            // Delete Account Button (Privacy/GDPR)
+            if (!user.isAreaHead) ...[
+              SizedBox(
+                width: double.infinity,
+                child: TextButton.icon(
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.error,
+                  ),
+                  icon: const Icon(Icons.delete_outline, size: 18),
+                  label: Text(
+                    'Delete my account',
+                    style: GoogleFonts.nunitoSans(fontSize: 13, fontWeight: FontWeight.w600),
+                  ),
+                  onPressed: _showDeleteAccountDialog,
+                ),
+              ),
+            ],
             const SizedBox(height: 40),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showDeleteAccountDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Account'),
+        content: const Text(
+          'Are you sure you want to delete your account? This action is permanent and will remove your personal data from Abuakwa Area Connect.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: AppColors.white,
+            ),
+            onPressed: () async {
+              Navigator.of(ctx).pop();
+              try {
+                await ref.read(authRepositoryProvider).deleteAccount();
+                await ref.read(authStateProvider.notifier).signOut();
+                if (mounted) {
+                  final router = GoRouter.maybeOf(context);
+                  if (router != null) {
+                    context.go('/login');
+                  }
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error deleting account: $e'),
+                      backgroundColor: AppColors.error,
+                    ),
+                  );
+                }
+              }
+            },
+            child: const Text('Delete My Account'),
+          ),
+        ],
       ),
     );
   }

@@ -37,11 +37,23 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           case UserRole.areaHead:
             return '/dashboard';
           case UserRole.pastor:
+            if (user.districtId == null) {
+              return '/pastor/register-district';
+            }
             return '/pastor-home';
           case UserRole.ministryLeader:
             return '/leader-home';
           case UserRole.member:
             return '/feed';
+        }
+      }
+
+      // If pastor has no district registered yet, keep them on register-district screen
+      if (user.isPastor && user.districtId == null) {
+        if (location != '/pastor/register-district' &&
+            location != '/profile' &&
+            location != '/notifications') {
+          return '/pastor/register-district';
         }
       }
 

@@ -32,6 +32,13 @@ class DistrictsNotifier extends AsyncNotifier<List<DistrictModel>> {
     state = AsyncValue.data(await repo.getDistricts());
   }
 
+  Future<void> addAssembly(String districtId, String name) async {
+    final repo = ref.read(districtsRepositoryProvider);
+    await repo.addAssembly(districtId: districtId, name: name);
+    ref.invalidate(assembliesForDistrictProvider(districtId));
+    state = AsyncValue.data(await repo.getDistricts());
+  }
+
   Future<void> refresh() async {
     state = const AsyncValue.loading();
     final repo = ref.read(districtsRepositoryProvider);

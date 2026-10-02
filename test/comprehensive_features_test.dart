@@ -508,4 +508,131 @@ void main() {
       expect(meeting.roomLink.contains('#config.startWithAudioOnly=true&config.startWithVideoMuted=true'), isTrue);
     });
   });
+
+  group('Part 1 & 4: District Lifecycle & Security Hardening Tests', () {
+    test('End-to-end Pastor invite without district -> redemption -> self-registration -> pending -> approval -> assembly addition', () async {
+      final container = ProviderContainer();
+      final authRepo = container.read(authRepositoryProvider);
+      final distRepo = container.read(districtsRepositoryProvider);
+
+      // 1. Area Head creates invite with NO district
+      final invite = await authRepo.createInvite(
+        role: UserRole.pastor,
+        targetName: 'Pastor Emmanuel Boakye',
+      );
+      expect(invite.districtId, isNull);
+      expect(invite.districtName, isNull);
+      expect(invite.role, UserRole.pastor);
+
+      // 2. Pastor redeems the invite
+      final redeemedUser = await authRepo.redeemInvite(
+        code: invite.code,
+        email: 'pastor.boakye@copabuakwa.org',
+        password: 'SecurePassword123!',
+        fullName: 'Pastor Emmanuel Boakye',
+      );
+      expect(redeemedUser.role, UserRole.pastor);
+      expect(redeemedUser.districtId, isNull);
+
+      // 3. Pastor registers new district with 2 assemblies and start date
+      final registeredDistrict = await distRepo.registerDistrict(
+        name: 'Tanoso East District',
+        assemblies: ['Central Assembly', 'Bethany Assembly'],
+        startDate: DateTime(2025, 1, 15),
+      );
+
+      // 4. District is saved as pending
+      expect(registeredDistrict.isPending, isTrue);
+      expect(registeredDistrict.name, 'Tanoso East District');
+      expect(registeredDistrict.assemblyNames?.length, 2);
+
+      // 5. Area Head fetches districts and sees the pending district
+      final allDistricts = await distRepo.getDistricts();
+      final pendingList = allDistricts.where((d) => d.isPending).toList();
+      expect(pendingList.any((d) => d.id == registeredDistrict.id), isTrue);
+
+      // 6. Area Head approves the district
+      await distRepo.approveDistrict(registeredDistrict.id, note: 'Approved by Apostle Area Head.');
+      final approvedDist = await distRepo.getDistrictById(registeredDistrict.id);
+      expect(approvedDist?.isActive, isTrue);
+
+      // 7. Pastor adds an additional assembly later
+      final newAsm = await distRepo.addAssembly(
+        districtId: registeredDistrict.id,
+        name: 'Maranatha Assembly',
+      );
+      expect(newAsm.name, 'Maranatha Assembly');
+      expect(newAsm.districtId, registeredDistrict.id);
+
+      final updatedAssemblies = await distRepo.getAssembliesForDistrict(registeredDistrict.id);
+      expect(updatedAssemblies.any((a) => a.name == 'Maranatha Assembly'), isTrue);
+
+      container.dispose();
+    });
+
+    test('Duplicate district names are blocked with descriptive message', () async {
+      final repo = SupabaseDistrictsRepository();
+      await repo.registerDistrict(
+        name: 'Abuakwa Central',
+        assemblies: ['Central Assembly'],
+        startDate: DateTime.now(),
+      );
+
+      // Attempt duplicate registration with different casing/spacing
+      expect(
+        () => repo.registerDistrict(
+          name: '  abuakwa   central  ',
+          assemblies: ['Another Assembly'],
+          startDate: DateTime.now(),
+        ),
+        throwsA(predicate((e) => e.toString().contains('already registered'))),
+      );
+    });
+
+    test('Invite code brute-force protection locks after 5 consecutive failures', () async {
+      final repo = SupabaseAuthRepository();
+      SupabaseAuthRepository.resetMockState();
+
+      for (int i = 0; i < 5; i++) {
+        try {
+          await repo.verifyInviteCode('ABK-WRON-00');
+        } catch (_) {}
+      }
+
+      // 6th attempt must trigger rate limit exception
+      expect(
+        () => repo.verifyInviteCode('ABK-WRON-00'),
+        throwsA(predicate((e) => e.toString().contains('Too many tries'))),
+      );
+    });
+
+    test('Member self-service account deletion removes profile record', () async {
+      final container = ProviderContainer();
+      final authRepo = container.read(authRepositoryProvider);
+      final distRepo = container.read(districtsRepositoryProvider);
+
+      // Create an active district
+      final activeDist = await distRepo.addDistrictDirectly(
+        name: 'Abuakwa Central District',
+        assemblies: ['Central Assembly'],
+      );
+
+      // Sign up member
+      final member = await authRepo.signUpMember(
+        fullName: 'Brother John Doe',
+        email: 'john.doe@gmail.com',
+        password: 'Password123!',
+        districtId: activeDist.id,
+        assemblyId: 'asm-1',
+      );
+      expect(member.fullName, 'Brother John Doe');
+
+      // Delete account
+      await authRepo.deleteAccount();
+      final currentProfile = await authRepo.getCurrentProfile();
+      expect(currentProfile, isNull);
+
+      container.dispose();
+    });
+  });
 }

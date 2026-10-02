@@ -6,6 +6,7 @@ import '../../../../core/widgets/author_attribution_header.dart';
 import '../../../../core/widgets/image_gallery_viewer.dart';
 import '../../../auth/domain/models/profile_model.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
+import '../../../districts/presentation/providers/districts_provider.dart';
 import '../../domain/models/project_model.dart';
 import '../providers/projects_provider.dart';
 import 'add_edit_project_screen.dart';
@@ -64,6 +65,9 @@ class _ProjectsListScreenState extends ConsumerState<ProjectsListScreen> {
           : null,
       body: Column(
         children: [
+          if (user?.isPastor ?? false)
+            _buildPastorDistrictHeader(context, user!),
+
           // Filter Row
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -322,6 +326,144 @@ class _ProjectsListScreenState extends ConsumerState<ProjectsListScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildPastorDistrictHeader(BuildContext context, UserProfile user) {
+    final districtId = user.districtId ?? '';
+    final assembliesAsync = ref.watch(assembliesForDistrictProvider(districtId));
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        border: const Border(bottom: BorderSide(color: AppColors.border)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.church, color: AppColors.navy, size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    'My District Overview',
+                    style: GoogleFonts.sourceSerif4(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.navy,
+                    ),
+                  ),
+                ],
+              ),
+              if (districtId.isNotEmpty)
+                TextButton.icon(
+                  onPressed: () => _showAddAssemblyDialog(context, districtId),
+                  icon: const Icon(Icons.add, size: 18, color: AppColors.navy),
+                  label: const Text(
+                    'Add Assembly',
+                    style: TextStyle(
+                      color: AppColors.navy,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          assembliesAsync.when(
+            loading: () => const SizedBox(
+              height: 24,
+              child: Center(child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))),
+            ),
+            error: (_, _) => const SizedBox.shrink(),
+            data: (assemblies) {
+              if (assemblies.isEmpty) {
+                return const Text(
+                  'No assemblies registered yet.',
+                  style: TextStyle(fontSize: 12, color: AppColors.softGrey),
+                );
+              }
+              return Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: assemblies.map((a) {
+                  return Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Text(
+                      a.name,
+                      style: const TextStyle(fontSize: 12, color: AppColors.text, fontWeight: FontWeight.w500),
+                    ),
+                  );
+                }).toList(),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAddAssemblyDialog(BuildContext context, String districtId) {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (dialogCtx) {
+        return AlertDialog(
+          title: const Text('Add Local Assembly'),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            decoration: const InputDecoration(
+              labelText: 'Assembly Name',
+              hintText: 'e.g. Grace Assembly',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogCtx).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.navy, foregroundColor: AppColors.white),
+              onPressed: () async {
+                final name = controller.text.trim();
+                if (name.isNotEmpty) {
+                  final messenger = ScaffoldMessenger.of(context);
+                  Navigator.of(dialogCtx).pop();
+                  try {
+                    await ref.read(districtsListProvider.notifier).addAssembly(districtId, name);
+                    messenger.showSnackBar(
+                      SnackBar(
+                        content: Text('Assembly "$name" added successfully.'),
+                        backgroundColor: AppColors.success,
+                      ),
+                    );
+                  } catch (e) {
+                    messenger.showSnackBar(
+                      SnackBar(
+                        content: Text('Error adding assembly: $e'),
+                        backgroundColor: AppColors.error,
+                      ),
+                    );
+                  }
+                }
+              },
+              child: const Text('Add Assembly'),
+            ),
+          ],
+        );
+      },
     );
   }
 }

@@ -7,7 +7,6 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_dimensions.dart';
 import '../../../../core/constants/app_strings.dart';
 import '../../../../core/widgets/app_text_field.dart';
-import '../../../../core/widgets/district_ring_logo.dart';
 import '../../../../core/widgets/outline_button.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../domain/models/invite_model.dart';
@@ -140,7 +139,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               context.go('/dashboard');
               break;
             case UserRole.pastor:
-              context.go('/pastor-home');
+              final pastorUser = ref.read(authStateProvider).value;
+              if (pastorUser?.districtId == null) {
+                context.go('/pastor/register-district');
+              } else {
+                context.go('/pastor-home');
+              }
               break;
             case UserRole.ministryLeader:
               context.go('/leader-home');
@@ -269,7 +273,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         if (router != null) {
           switch (_selectedRole) {
             case UserRole.pastor:
-              context.go('/pastor-home');
+              if (_verifiedInvite?.districtId == null) {
+                context.go('/pastor/register-district');
+              } else {
+                context.go('/pastor-home');
+              }
               break;
             case UserRole.ministryLeader:
               context.go('/leader-home');
@@ -332,7 +340,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 child: Column(
                   children: [
                     const SizedBox(height: 8),
-                    const DistrictRingLogo(size: 88),
+                    Image.asset(
+                      'assets/images/abuakwa_logo.png',
+                      width: 96,
+                      height: 96,
+                      filterQuality: FilterQuality.high,
+                      semanticLabel: 'Church of Pentecost logo',
+                    ),
                     const SizedBox(height: 14),
                     Text(
                       AppStrings.appName,

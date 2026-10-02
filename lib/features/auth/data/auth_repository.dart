@@ -53,6 +53,7 @@ abstract class AuthRepository {
   });
 
   Future<void> changePassword(String newPassword);
+  Future<void> deleteAccount();
 
   Future<void> signOut();
   Future<UserProfile?> getCurrentProfile();
@@ -641,6 +642,23 @@ class SupabaseAuthRepository implements AuthRepository {
       );
     } catch (e) {
       debugPrint('[AuthRepository] Error changing password: $e');
+      rethrow;
+    }
+  }
+
+  @override
+  Future<void> deleteAccount() async {
+    if (!SupabaseConfig.isInitialized) {
+      if (_currentMockUser != null) {
+        _mockUsers.removeWhere((u) => u.id == _currentMockUser!.id);
+        _currentMockUser = null;
+      }
+      return;
+    }
+    try {
+      await _sb.rpc('delete_own_account');
+    } catch (e) {
+      debugPrint('[AuthRepository] Error deleting account: $e');
       rethrow;
     }
   }
