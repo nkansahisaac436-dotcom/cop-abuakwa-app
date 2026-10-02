@@ -12,11 +12,13 @@ import 'package:cop_abuakwa_app/features/transfer/domain/models/tenure_archive_m
 import 'package:cop_abuakwa_app/features/transfer/utils/archive_pdf_generator.dart';
 import 'package:cop_abuakwa_app/features/auth/data/auth_repository.dart';
 import 'package:cop_abuakwa_app/features/meetings/data/meetings_repository.dart';
+import 'package:cop_abuakwa_app/core/network/supabase_client.dart';
 import 'package:cop_abuakwa_app/main.dart';
 
 void main() {
   setUpAll(() {
     GoogleFonts.config.allowRuntimeFetching = false;
+    SupabaseConfig.setMockMode(true);
   });
 
   setUp(() {

@@ -6,10 +6,16 @@ class SupabaseConfig {
   SupabaseConfig._();
 
   static bool _isInitialized = false;
-  static bool get isInitialized => _isInitialized;
+  static bool _mockMode = false;
+
+  static bool get isInitialized => _isInitialized && !_mockMode;
+
+  static void setMockMode(bool enabled) {
+    _mockMode = enabled;
+  }
 
   static SupabaseClient get client {
-    if (!_isInitialized) {
+    if (!isInitialized) {
       try {
         return Supabase.instance.client;
       } catch (e) {
@@ -21,10 +27,18 @@ class SupabaseConfig {
 
   static Future<void> init() async {
     try {
-      final url = dotenv.env['SUPABASE_URL'] ?? '';
-      final anonKey = dotenv.env['SUPABASE_ANON_KEY'] ?? '';
+      final url = (dotenv.env['SUPABASE_URL'] ?? '').trim();
+      final anonKey = (dotenv.env['SUPABASE_ANON_KEY'] ?? '').trim();
 
-      if (url.isNotEmpty && anonKey.isNotEmpty && !url.contains('dummy-abuakwa-project')) {
+      final isPlaceholder = url.isEmpty ||
+          anonKey.isEmpty ||
+          url.contains('dummy-abuakwa-project') ||
+          url.contains('your-project-id') ||
+          url.contains('example.com') ||
+          anonKey.contains('your-anon-key') ||
+          anonKey.contains('placeholder');
+
+      if (!isPlaceholder) {
         // ignore: deprecated_member_use
         await Supabase.initialize(
           url: url,
