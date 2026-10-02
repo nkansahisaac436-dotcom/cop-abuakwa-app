@@ -203,6 +203,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> {
       ),
       floatingActionButton: canUpdate
           ? FloatingActionButton.extended(
+              heroTag: 'project_detail_fab',
               backgroundColor: AppColors.navy,
               foregroundColor: AppColors.white,
               icon: const Icon(Icons.add_task),

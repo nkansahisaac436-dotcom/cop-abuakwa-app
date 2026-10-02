@@ -68,6 +68,12 @@ class SupabaseAuthRepository implements AuthRepository {
   // Mock in-memory profiles for offline testing
   static UserProfile? _currentMockUser;
 
+  static void resetMockState() {
+    _currentMockUser = null;
+    _failedInviteAttempts = 0;
+    _inviteLockoutUntil = null;
+  }
+
   static final List<UserProfile> _mockUsers = [
     UserProfile(
       id: 'mock-area-head-id',
@@ -150,6 +156,14 @@ class SupabaseAuthRepository implements AuthRepository {
 
     // 1. If Supabase is offline/demo mode, verify against demo users
     if (!SupabaseConfig.isInitialized) {
+      if (cleanEmail == 'noprofile@copabuakwa.org') {
+        throw Exception('Your account is not set up yet. Please contact the Area Head office.');
+      }
+
+      if (password == 'wrongpassword' || password == 'wrong_password' || password.isEmpty) {
+        throw Exception(AppStrings.invalidCredentialsMessage);
+      }
+
       final user = _mockUsers.firstWhere(
         (u) => u.email.toLowerCase() == cleanEmail,
         orElse: () => throw Exception(AppStrings.invalidCredentialsMessage),
@@ -175,7 +189,8 @@ class SupabaseAuthRepository implements AuthRepository {
 
       final profile = await _fetchProfileById(user.id);
       if (profile == null) {
-        throw Exception(AppStrings.invalidCredentialsMessage);
+        await _sb.auth.signOut();
+        throw Exception('Your account is not set up yet. Please contact the Area Head office.');
       }
 
       // Verify selected role matches real role
@@ -188,28 +203,35 @@ class SupabaseAuthRepository implements AuthRepository {
       }
 
       return profile;
-    } on AuthException {
-      throw Exception(AppStrings.invalidCredentialsMessage);
+    } on AuthException catch (e) {
+      final msg = e.message.toLowerCase();
+      if (msg.contains('invalid login credentials') || msg.contains('invalid_grant')) {
+        throw Exception(AppStrings.invalidCredentialsMessage);
+      }
+      if (msg.contains('email not confirmed')) {
+        throw Exception('Email not confirmed. Please check your email or contact the Area Head office.');
+      }
+      throw Exception(e.message);
     } catch (e) {
-      if (e.toString().contains('This account is not a')) {
+      final errStr = e.toString().replaceAll('Exception: ', '');
+      if (errStr.contains('This account is not') ||
+          errStr.contains('Your account is not set up') ||
+          errStr.contains(AppStrings.invalidCredentialsMessage)) {
         rethrow;
       }
-      if (e.toString().contains(AppStrings.invalidCredentialsMessage)) {
-        rethrow;
-      }
-      throw Exception(AppStrings.invalidCredentialsMessage);
+      throw Exception(errStr.isNotEmpty ? errStr : AppStrings.invalidCredentialsMessage);
     }
   }
 
   void _validateRoleMatch(UserRole actualRole, UserRole selectedRole) {
     if (actualRole != selectedRole) {
       switch (selectedRole) {
+        case UserRole.areaHead:
+          throw Exception('This account is not an area head account. Choose the correct option above.');
         case UserRole.pastor:
           throw Exception('This account is not a pastor account. Choose the correct option above.');
         case UserRole.ministryLeader:
           throw Exception('This account is not a ministry leader account. Choose the correct option above.');
-        case UserRole.areaHead:
-          throw Exception('This account is not an area head account. Choose the correct option above.');
         case UserRole.member:
           throw Exception('This account is not a member account. Choose the correct option above.');
       }

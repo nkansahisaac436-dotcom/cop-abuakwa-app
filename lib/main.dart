@@ -2,13 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'core/constants/app_colors.dart';
 import 'core/constants/app_strings.dart';
 import 'core/network/supabase_client.dart';
+import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
-import 'features/auth/presentation/providers/auth_provider.dart';
-import 'features/auth/presentation/screens/home_shell_screen.dart';
-import 'features/auth/presentation/screens/login_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -37,41 +34,20 @@ Future<void> main() async {
   );
 }
 
-class AbuakwaApp extends StatelessWidget {
+class AbuakwaApp extends ConsumerWidget {
   const AbuakwaApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
+  Widget build(BuildContext context, WidgetRef ref) {
+    final router = ref.watch(appRouterProvider);
+
+    return MaterialApp.router(
       title: AppStrings.appName,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: ThemeMode.light,
-      home: const AuthGate(),
-    );
-  }
-}
-
-class AuthGate extends ConsumerWidget {
-  const AuthGate({super.key});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final authState = ref.watch(authStateProvider);
-
-    return authState.when(
-      loading: () => const Scaffold(
-        backgroundColor: AppColors.background,
-        body: Center(child: CircularProgressIndicator()),
-      ),
-      error: (_, _) => const LoginScreen(),
-      data: (userProfile) {
-        if (userProfile != null) {
-          return const HomeShellScreen();
-        }
-        return const LoginScreen();
-      },
+      routerConfig: router,
     );
   }
 }

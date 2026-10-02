@@ -178,7 +178,7 @@ class AppTheme {
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.navy,
           foregroundColor: AppColors.white,
-          minimumSize: const Size(double.infinity, AppDimensions.buttonHeight),
+          minimumSize: const Size(64, AppDimensions.buttonHeight),
           shape: const StadiumBorder(),
           textStyle: _sansStyle(
             fontSize: AppDimensions.fontSizeButton,
@@ -190,7 +190,7 @@ class AppTheme {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: AppColors.gold,
-          minimumSize: const Size(double.infinity, AppDimensions.buttonHeight),
+          minimumSize: const Size(64, AppDimensions.buttonHeight),
           side: const BorderSide(color: AppColors.gold, width: 1.8),
           shape: const StadiumBorder(),
           textStyle: _sansStyle(

@@ -9,6 +9,17 @@ enum PostType {
   final String label;
   const PostType(this.value, this.label);
 
+  String get shortLabel {
+    switch (this) {
+      case PostType.announcement:
+        return 'Announcement';
+      case PostType.thought:
+        return 'Thought';
+      case PostType.news:
+        return 'News';
+    }
+  }
+
   static PostType fromString(String? val) {
     return PostType.values.firstWhere(
       (t) => t.value == val,

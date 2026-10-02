@@ -47,6 +47,7 @@ class PublicFeedScreen extends ConsumerWidget {
       ),
       floatingActionButton: canPost
           ? FloatingActionButton.extended(
+              heroTag: 'public_feed_fab',
               backgroundColor: AppColors.navy,
               foregroundColor: AppColors.white,
               icon: const Icon(Icons.edit),
@@ -151,6 +152,8 @@ class PublicFeedScreen extends ConsumerWidget {
                   children: [
                     Text(
                       post.authorName ?? 'Area Minister',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.nunitoSans(
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
@@ -159,6 +162,8 @@ class PublicFeedScreen extends ConsumerWidget {
                     ),
                     Text(
                       dateFormat.format(post.createdAt),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.nunitoSans(
                         fontSize: 11,
                         color: AppColors.softGrey,
@@ -167,6 +172,7 @@ class PublicFeedScreen extends ConsumerWidget {
                   ],
                 ),
               ),
+              const SizedBox(width: 8),
               // Type Badge
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -178,7 +184,7 @@ class PublicFeedScreen extends ConsumerWidget {
                   ),
                 ),
                 child: Text(
-                  post.type.label,
+                  post.type.shortLabel,
                   style: GoogleFonts.nunitoSans(
                     fontSize: 10,
                     fontWeight: FontWeight.bold,

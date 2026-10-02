@@ -23,6 +23,7 @@ class PastorThoughtsScreen extends ConsumerWidget {
       ),
       floatingActionButton: canPost
           ? FloatingActionButton.extended(
+              heroTag: 'pastor_thoughts_fab',
               backgroundColor: AppColors.navy,
               foregroundColor: AppColors.white,
               icon: const Icon(Icons.edit_note),
@@ -96,12 +97,15 @@ class PastorThoughtsScreen extends ConsumerWidget {
                         Expanded(
                           child: Text(
                             thought.authorName ?? 'District Minister',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: GoogleFonts.nunitoSans(
                               fontWeight: FontWeight.bold,
                               fontSize: 13,
                             ),
                           ),
                         ),
+                        const SizedBox(width: 6),
                         Text(
                           DateFormat('MMM d, h:mm a').format(thought.createdAt),
                           style: GoogleFonts.nunitoSans(

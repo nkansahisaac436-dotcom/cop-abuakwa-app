@@ -25,7 +25,6 @@ class AuthNotifier extends AsyncNotifier<UserProfile?> {
     required String password,
     required UserRole selectedRole,
   }) async {
-    state = const AsyncValue.loading();
     try {
       final repo = ref.read(authRepositoryProvider);
       final profile = await repo.signIn(
@@ -34,8 +33,8 @@ class AuthNotifier extends AsyncNotifier<UserProfile?> {
         selectedRole: selectedRole,
       );
       state = AsyncValue.data(profile);
-    } catch (e, st) {
-      state = AsyncValue.error(e, st);
+    } catch (e) {
+      state = const AsyncValue.data(null);
       rethrow;
     }
   }
@@ -47,7 +46,6 @@ class AuthNotifier extends AsyncNotifier<UserProfile?> {
     required String districtId,
     required String assemblyId,
   }) async {
-    state = const AsyncValue.loading();
     try {
       final repo = ref.read(authRepositoryProvider);
       final profile = await repo.signUpMember(
@@ -58,8 +56,8 @@ class AuthNotifier extends AsyncNotifier<UserProfile?> {
         assemblyId: assemblyId,
       );
       state = AsyncValue.data(profile);
-    } catch (e, st) {
-      state = AsyncValue.error(e, st);
+    } catch (e) {
+      state = const AsyncValue.data(null);
       rethrow;
     }
   }
@@ -70,7 +68,6 @@ class AuthNotifier extends AsyncNotifier<UserProfile?> {
     required String password,
     required String fullName,
   }) async {
-    state = const AsyncValue.loading();
     try {
       final repo = ref.read(authRepositoryProvider);
       final profile = await repo.redeemInvite(
@@ -80,14 +77,13 @@ class AuthNotifier extends AsyncNotifier<UserProfile?> {
         fullName: fullName,
       );
       state = AsyncValue.data(profile);
-    } catch (e, st) {
-      state = AsyncValue.error(e, st);
+    } catch (e) {
+      state = const AsyncValue.data(null);
       rethrow;
     }
   }
 
   Future<void> signOut() async {
-    state = const AsyncValue.loading();
     final repo = ref.read(authRepositoryProvider);
     await repo.signOut();
     state = const AsyncValue.data(null);

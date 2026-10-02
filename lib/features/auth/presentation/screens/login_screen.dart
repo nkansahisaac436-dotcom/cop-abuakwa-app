@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_dimensions.dart';
@@ -130,10 +131,32 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             password: _passwordController.text,
             selectedRole: _selectedRole,
           );
+
+      if (mounted) {
+        final router = GoRouter.maybeOf(context);
+        if (router != null) {
+          switch (_selectedRole) {
+            case UserRole.areaHead:
+              context.go('/dashboard');
+              break;
+            case UserRole.pastor:
+              context.go('/pastor-home');
+              break;
+            case UserRole.ministryLeader:
+              context.go('/leader-home');
+              break;
+            case UserRole.member:
+              context.go('/feed');
+              break;
+          }
+        }
+      }
     } catch (e) {
-      setState(() {
-        _errorMessage = e.toString().replaceAll('Exception: ', '');
-      });
+      if (mounted) {
+        setState(() {
+          _errorMessage = e.toString().replaceAll('Exception: ', '');
+        });
+      }
     } finally {
       if (mounted) {
         setState(() {
@@ -240,10 +263,29 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             password: _passwordController.text,
             fullName: _fullNameController.text.isNotEmpty ? _fullNameController.text : _verifiedInvite!.targetName,
           );
+
+      if (mounted) {
+        final router = GoRouter.maybeOf(context);
+        if (router != null) {
+          switch (_selectedRole) {
+            case UserRole.pastor:
+              context.go('/pastor-home');
+              break;
+            case UserRole.ministryLeader:
+              context.go('/leader-home');
+              break;
+            default:
+              context.go('/feed');
+              break;
+          }
+        }
+      }
     } catch (e) {
-      setState(() {
-        _errorMessage = e.toString().replaceAll('Exception: ', '');
-      });
+      if (mounted) {
+        setState(() {
+          _errorMessage = e.toString().replaceAll('Exception: ', '');
+        });
+      }
     } finally {
       if (mounted) {
         setState(() {
@@ -254,9 +296,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   void _navigateToSignUp() {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (context) => const SignUpScreen()),
-    );
+    final router = GoRouter.maybeOf(context);
+    if (router != null) {
+      context.push('/signup');
+    } else {
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (context) => const SignUpScreen()),
+      );
+    }
   }
 
   @override

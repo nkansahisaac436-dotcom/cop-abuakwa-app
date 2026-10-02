@@ -30,6 +30,7 @@ class MinistryDetailScreen extends ConsumerWidget {
       ),
       floatingActionButton: canPost
           ? FloatingActionButton.extended(
+              heroTag: 'ministry_detail_fab',
               backgroundColor: AppColors.navy,
               foregroundColor: AppColors.white,
               icon: const Icon(Icons.edit),

@@ -137,36 +137,58 @@ class _MeetingsScreenState extends ConsumerState<MeetingsScreen> {
                   Row(
                     children: [
                       Expanded(
-                        child: ElevatedButton.icon(
+                        child: ElevatedButton(
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.gold,
                             foregroundColor: AppColors.navyDark,
                             shape: const StadiumBorder(),
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                          ),
-                          icon: const Icon(Icons.video_call, size: 20),
-                          label: Text(
-                            'Start Call',
-                            style: GoogleFonts.nunitoSans(fontWeight: FontWeight.bold),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
                           ),
                           onPressed: _startInstantMeeting,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.video_call, size: 18),
+                              const SizedBox(width: 4),
+                              Flexible(
+                                child: Text(
+                                  'Start Call',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.nunitoSans(fontWeight: FontWeight.bold, fontSize: 12),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                       const SizedBox(width: 10),
                       Expanded(
-                        child: OutlinedButton.icon(
+                        child: OutlinedButton(
                           style: OutlinedButton.styleFrom(
                             foregroundColor: AppColors.white,
                             side: const BorderSide(color: AppColors.white, width: 1.5),
                             shape: const StadiumBorder(),
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                          ),
-                          icon: const Icon(Icons.calendar_month, size: 18),
-                          label: Text(
-                            'Schedule',
-                            style: GoogleFonts.nunitoSans(fontWeight: FontWeight.bold),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
                           ),
                           onPressed: _scheduleMeeting,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.calendar_month, size: 16),
+                              const SizedBox(width: 4),
+                              Flexible(
+                                child: Text(
+                                  'Schedule',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.nunitoSans(fontWeight: FontWeight.bold, fontSize: 12),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ],
@@ -207,75 +229,76 @@ class _MeetingsScreenState extends ConsumerState<MeetingsScreen> {
                   );
                 }
 
-                return ListView.separated(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: meetings.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 12),
-                  itemBuilder: (context, index) {
-                    final m = meetings[index];
-
-                    return Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: AppColors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: AppColors.border),
-                        boxShadow: [
-                          BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 8),
-                        ],
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: AppColors.navy.withValues(alpha: 0.08),
-                              borderRadius: BorderRadius.circular(12),
+                return Column(
+                  children: [
+                    for (int index = 0; index < meetings.length; index++) ...[
+                      if (index > 0) const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AppColors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: AppColors.border),
+                          boxShadow: [
+                            BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 8),
+                          ],
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: AppColors.navy.withValues(alpha: 0.08),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Icon(Icons.headset_mic_outlined, color: AppColors.navy, size: 24),
                             ),
-                            child: const Icon(Icons.headset_mic_outlined, color: AppColors.navy, size: 24),
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  m.title,
-                                  style: GoogleFonts.sourceSerif4(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColors.navy,
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    meetings[index].title,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.sourceSerif4(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.navy,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  DateFormat('EEEE, MMM d • h:mm a').format(m.scheduledAt),
-                                  style: GoogleFonts.nunitoSans(
-                                    fontSize: 12,
-                                    color: AppColors.softGrey,
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    DateFormat('EEEE, MMM d • h:mm a').format(meetings[index].scheduledAt),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.nunitoSans(
+                                      fontSize: 12,
+                                      color: AppColors.softGrey,
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.navy,
-                              foregroundColor: AppColors.white,
-                              shape: const StadiumBorder(),
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            const SizedBox(width: 8),
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.navy,
+                                foregroundColor: AppColors.white,
+                                shape: const StadiumBorder(),
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                              ),
+                              onPressed: () {
+                                ref.read(meetingsRepositoryProvider).launchMeetingUrl(meetings[index].roomLink);
+                              },
+                              child: const Text('Join'),
                             ),
-                            onPressed: () {
-                              ref.read(meetingsRepositoryProvider).launchMeetingUrl(m.roomLink);
-                            },
-                            child: const Text('Join'),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    );
-                  },
+                    ],
+                  ],
                 );
               },
             ),

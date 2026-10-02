@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../auth/domain/models/profile_model.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../districts/presentation/screens/districts_activation_screen.dart';
 import '../../../feeds/presentation/screens/public_feed_screen.dart';
@@ -16,7 +17,9 @@ import '../../../profile/presentation/screens/profile_screen.dart';
 import 'invite_pastor_screen.dart';
 
 class HomeShellScreen extends ConsumerStatefulWidget {
-  const HomeShellScreen({super.key});
+  final UserRole? initialRole;
+
+  const HomeShellScreen({super.key, this.initialRole});
 
   @override
   ConsumerState<HomeShellScreen> createState() => _HomeShellScreenState();
@@ -297,12 +300,14 @@ class AreaHeadDashboardTab extends ConsumerWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'Supervision Visits',
-                  style: GoogleFonts.sourceSerif4(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.navy,
+                Expanded(
+                  child: Text(
+                    'Supervision Visits',
+                    style: GoogleFonts.sourceSerif4(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.navy,
+                    ),
                   ),
                 ),
                 TextButton(
@@ -331,9 +336,11 @@ class AreaHeadDashboardTab extends ConsumerWidget {
                     children: [
                       const Icon(Icons.check_circle_outline, color: AppColors.success, size: 20),
                       const SizedBox(width: 8),
-                      Text(
-                        'Recent Visit: Tanoso Central Assembly',
-                        style: GoogleFonts.nunitoSans(fontWeight: FontWeight.bold, fontSize: 14),
+                      Expanded(
+                        child: Text(
+                          'Recent Visit: Tanoso Central Assembly',
+                          style: GoogleFonts.nunitoSans(fontWeight: FontWeight.bold, fontSize: 14),
+                        ),
                       ),
                     ],
                   ),

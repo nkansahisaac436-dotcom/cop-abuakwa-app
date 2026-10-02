@@ -183,6 +183,7 @@ class _SupervisionVisitsScreenState extends ConsumerState<SupervisionVisitsScree
         title: const Text('Area Supervision Log'),
       ),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'supervision_visits_fab',
         backgroundColor: AppColors.navy,
         foregroundColor: AppColors.white,
         icon: const Icon(Icons.add_location_alt),

@@ -3,17 +3,24 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cop_abuakwa_app/core/constants/app_strings.dart';
+import 'package:cop_abuakwa_app/core/widgets/primary_button.dart';
 import 'package:cop_abuakwa_app/features/auth/domain/models/profile_model.dart';
 import 'package:cop_abuakwa_app/features/auth/presentation/providers/auth_provider.dart';
 import 'package:cop_abuakwa_app/features/auth/presentation/screens/login_screen.dart';
 import 'package:cop_abuakwa_app/features/auth/presentation/screens/signup_screen.dart';
 import 'package:cop_abuakwa_app/features/transfer/domain/models/tenure_archive_model.dart';
 import 'package:cop_abuakwa_app/features/transfer/utils/archive_pdf_generator.dart';
+import 'package:cop_abuakwa_app/features/auth/data/auth_repository.dart';
 import 'package:cop_abuakwa_app/features/meetings/data/meetings_repository.dart';
+import 'package:cop_abuakwa_app/main.dart';
 
 void main() {
   setUpAll(() {
     GoogleFonts.config.allowRuntimeFetching = false;
+  });
+
+  setUp(() {
+    SupabaseAuthRepository.resetMockState();
   });
 
   group('Step 2: Login & Sign-up Widget Tests', () {
@@ -177,6 +184,257 @@ void main() {
         ),
         throwsA(predicate((e) => e.toString().contains('This account is not a pastor account. Choose the correct option above.'))),
       );
+
+      // Try logging in with pastor email while selecting Area Head role
+      expect(
+        () => repo.signIn(
+          email: 'pastor@copabuakwa.org',
+          password: 'password123',
+          selectedRole: UserRole.areaHead,
+        ),
+        throwsA(predicate((e) => e.toString().contains('This account is not an area head account. Choose the correct option above.'))),
+      );
+
+      // Try logging in with Area Head email while selecting Member role
+      expect(
+        () => repo.signIn(
+          email: 'areahead@copabuakwa.org',
+          password: 'password123',
+          selectedRole: UserRole.member,
+        ),
+        throwsA(predicate((e) => e.toString().contains('This account is not a member account. Choose the correct option above.'))),
+      );
+    });
+
+    test('Logging in with wrong password throws invalid credentials message', () async {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final repo = container.read(authRepositoryProvider);
+
+      expect(
+        () => repo.signIn(
+          email: 'areahead@copabuakwa.org',
+          password: 'wrongpassword',
+          selectedRole: UserRole.areaHead,
+        ),
+        throwsA(predicate((e) => e.toString().contains(AppStrings.invalidCredentialsMessage))),
+      );
+    });
+
+    test('Logging in with user that has no profile row throws specific setup error', () async {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final repo = container.read(authRepositoryProvider);
+
+      expect(
+        () => repo.signIn(
+          email: 'noprofile@copabuakwa.org',
+          password: 'password123',
+          selectedRole: UserRole.areaHead,
+        ),
+        throwsA(predicate((e) => e.toString().contains('Your account is not set up yet. Please contact the Area Head office.'))),
+      );
+    });
+  });
+
+  group('Step 3: All 4 Roles Login & Dashboard Landing Widget Tests', () {
+    testWidgets('Area Head logs in and lands on Area Head Dashboard', (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(400, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      await tester.pumpWidget(
+        const ProviderScope(
+          child: AbuakwaApp(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Select Area Head chip
+      await tester.tap(find.text('Area Head'));
+      await tester.pumpAndSettle();
+
+      // Fill in Area Head credentials
+      await tester.enterText(find.byType(TextFormField).at(0), 'areahead@copabuakwa.org');
+      await tester.enterText(find.byType(TextFormField).at(1), 'AbuakwaAreaHead2026!');
+      await tester.pumpAndSettle();
+
+      // Tap Log in button
+      await tester.tap(find.widgetWithText(PrimaryButton, AppStrings.logIn));
+      await tester.pumpAndSettle();
+
+      // Should be on Area Head Dashboard
+      expect(find.text('Area Head Dashboard'), findsOneWidget);
+      expect(find.text('Supervisory Actions'), findsOneWidget);
+    });
+
+    testWidgets('Pastor logs in and lands on Pastor Home Screen', (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(400, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      await tester.pumpWidget(
+        const ProviderScope(
+          child: AbuakwaApp(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Select Pastor chip
+      await tester.tap(find.text('Pastor'));
+      await tester.pumpAndSettle();
+
+      // Fill in Pastor credentials
+      await tester.enterText(find.byType(TextFormField).at(0), 'pastor@copabuakwa.org');
+      await tester.enterText(find.byType(TextFormField).at(1), 'AbuakwaPastor2026!');
+      await tester.pumpAndSettle();
+
+      // Tap Log in button
+      await tester.tap(find.widgetWithText(PrimaryButton, AppStrings.logIn));
+      await tester.pumpAndSettle();
+
+      // Should be on Pastor Home (Feed, My District, Thoughts tabs)
+      expect(find.text('Feed'), findsOneWidget);
+      expect(find.text('My District'), findsOneWidget);
+      expect(find.text('Thoughts'), findsOneWidget);
+    });
+
+    testWidgets('Ministry Leader logs in and lands on Leader Home Screen', (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(400, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      await tester.pumpWidget(
+        const ProviderScope(
+          child: AbuakwaApp(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Select Leader chip
+      await tester.tap(find.text('Leader'));
+      await tester.pumpAndSettle();
+
+      // Fill in Leader credentials
+      await tester.enterText(find.byType(TextFormField).at(0), 'womenleader@copabuakwa.org');
+      await tester.enterText(find.byType(TextFormField).at(1), 'AbuakwaLeader2026!');
+      await tester.pumpAndSettle();
+
+      // Tap Log in button
+      await tester.tap(find.widgetWithText(PrimaryButton, AppStrings.logIn));
+      await tester.pumpAndSettle();
+
+      // Should be on Leader Home
+      expect(find.text('Area Feed'), findsOneWidget);
+      expect(find.text('Ministries'), findsOneWidget);
+    });
+
+    testWidgets('Member logs in and lands on Member Feed Screen', (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(400, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      await tester.pumpWidget(
+        const ProviderScope(
+          child: AbuakwaApp(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Select Member chip (default)
+      await tester.enterText(find.byType(TextFormField).at(0), 'kofi@example.com');
+      await tester.enterText(find.byType(TextFormField).at(1), 'AbuakwaMember2026!');
+      await tester.pumpAndSettle();
+
+      // Tap Log in button
+      await tester.tap(find.widgetWithText(PrimaryButton, AppStrings.logIn));
+      await tester.pumpAndSettle();
+
+      // Should be on Member Feed
+      expect(find.text('Feed'), findsOneWidget);
+      expect(find.text('Projects'), findsOneWidget);
+    });
+
+    testWidgets('Wrong password shows visible error banner and stays on LoginScreen', (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(400, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      await tester.pumpWidget(
+        const ProviderScope(
+          child: AbuakwaApp(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Enter wrong password
+      await tester.enterText(find.byType(TextFormField).at(0), 'areahead@copabuakwa.org');
+      await tester.enterText(find.byType(TextFormField).at(1), 'wrongpassword');
+      await tester.pumpAndSettle();
+
+      // Tap Log in button
+      await tester.tap(find.widgetWithText(PrimaryButton, AppStrings.logIn));
+      await tester.pumpAndSettle();
+
+      // Error banner is visible and screen didn't blank out
+      expect(find.text(AppStrings.invalidCredentialsMessage), findsOneWidget);
+      expect(find.text(AppStrings.logIn), findsOneWidget);
+    });
+
+    testWidgets('Wrong role chip shows specific role mismatch error banner', (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(400, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      await tester.pumpWidget(
+        const ProviderScope(
+          child: AbuakwaApp(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Select Area Head chip but enter Pastor email
+      await tester.tap(find.text('Area Head'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextFormField).at(0), 'pastor@copabuakwa.org');
+      await tester.enterText(find.byType(TextFormField).at(1), 'AbuakwaPastor2026!');
+      await tester.pumpAndSettle();
+
+      // Tap Log in button
+      await tester.tap(find.widgetWithText(PrimaryButton, AppStrings.logIn));
+      await tester.pumpAndSettle();
+
+      // Specific error is visible
+      expect(find.text('This account is not an area head account. Choose the correct option above.'), findsOneWidget);
+    });
+
+    testWidgets('User with no profile row shows specific not set up error banner', (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(400, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      await tester.pumpWidget(
+        const ProviderScope(
+          child: AbuakwaApp(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Area Head'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextFormField).at(0), 'noprofile@copabuakwa.org');
+      await tester.enterText(find.byType(TextFormField).at(1), 'SomePassword123!');
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(PrimaryButton, AppStrings.logIn));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Your account is not set up yet. Please contact the Area Head office.'), findsOneWidget);
+      expect(find.text(AppStrings.logIn), findsOneWidget);
     });
   });
 

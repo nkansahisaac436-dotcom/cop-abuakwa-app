@@ -42,6 +42,7 @@ class _ProjectsListScreenState extends ConsumerState<ProjectsListScreen> {
       ),
       floatingActionButton: canAddProject && !widget.onlyPublic
           ? FloatingActionButton.extended(
+              heroTag: 'projects_list_fab',
               backgroundColor: AppColors.navy,
               foregroundColor: AppColors.white,
               icon: const Icon(Icons.add),
@@ -64,14 +65,17 @@ class _ProjectsListScreenState extends ConsumerState<ProjectsListScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             color: AppColors.white,
-            child: Row(
-              children: [
-                _buildFilterChip('All Activities', 'all'),
-                const SizedBox(width: 8),
-                _buildFilterChip('Projects', 'project'),
-                const SizedBox(width: 8),
-                _buildFilterChip('Events', 'event'),
-              ],
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  _buildFilterChip('All Activities', 'all'),
+                  const SizedBox(width: 8),
+                  _buildFilterChip('Projects', 'project'),
+                  const SizedBox(width: 8),
+                  _buildFilterChip('Events', 'event'),
+                ],
+              ),
             ),
           ),
           const Divider(height: 1, color: AppColors.border),

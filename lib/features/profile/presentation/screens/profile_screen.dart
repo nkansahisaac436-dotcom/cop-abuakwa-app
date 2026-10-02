@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_dimensions.dart';
@@ -271,6 +272,12 @@ class ProfileScreen extends ConsumerWidget {
                 ),
                 onPressed: () async {
                   await ref.read(authStateProvider.notifier).signOut();
+                  if (context.mounted) {
+                    final router = GoRouter.maybeOf(context);
+                    if (router != null) {
+                      context.go('/login');
+                    }
+                  }
                 },
               ),
             ),
