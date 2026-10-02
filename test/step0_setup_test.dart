@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cop_abuakwa_app/core/constants/app_colors.dart';
 import 'package:cop_abuakwa_app/core/constants/app_strings.dart';
+import 'package:cop_abuakwa_app/core/network/supabase_client.dart';
 import 'package:cop_abuakwa_app/core/theme/app_theme.dart';
 import 'package:cop_abuakwa_app/core/widgets/district_ring_logo.dart';
 import 'package:cop_abuakwa_app/core/widgets/warning_banner.dart';
@@ -10,6 +11,7 @@ import 'package:cop_abuakwa_app/core/widgets/warning_banner.dart';
 void main() {
   setUpAll(() {
     GoogleFonts.config.allowRuntimeFetching = false;
+    SupabaseConfig.setMockMode(true);
   });
 
   test('Theme and color tokens are correctly defined', () {
