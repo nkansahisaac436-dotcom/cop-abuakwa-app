@@ -7,6 +7,9 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   test_and_analyze:
     name: Run Analysis & Unit Tests
@@ -35,16 +38,11 @@ jobs:
           set +e
           flutter test --reporter=expanded > test_output.txt 2>&1
           TEST_EXIT_CODE=$?
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git checkout -B ci-log
+          git add test_output.txt
+          git commit -m "ci: test output log" || true
+          git push -f origin ci-log || true
           cat test_output.txt
-          echo "### Flutter Test Output" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          cat test_output.txt >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
           exit $TEST_EXIT_CODE
-
-      - name: Upload Test Output
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-output
-          path: test_output.txt
