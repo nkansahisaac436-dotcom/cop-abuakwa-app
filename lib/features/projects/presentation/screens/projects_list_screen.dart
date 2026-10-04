@@ -7,6 +7,7 @@ import '../../../../core/widgets/image_gallery_viewer.dart';
 import '../../../auth/domain/models/profile_model.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../districts/presentation/providers/districts_provider.dart';
+import '../../../districts/presentation/screens/district_assemblies_screen.dart';
 import '../../domain/models/project_model.dart';
 import '../providers/projects_provider.dart';
 import 'add_edit_project_screen.dart';
@@ -34,10 +35,25 @@ class _ProjectsListScreenState extends ConsumerState<ProjectsListScreen> {
       appBar: AppBar(
         title: Text(
           user?.isPastor ?? false
-              ? 'My District Projects'
+              ? 'My District'
               : 'District Projects & Events',
         ),
         actions: [
+          if (user?.isPastor ?? false)
+            IconButton(
+              icon: const Icon(Icons.home_work_outlined),
+              tooltip: 'Assemblies',
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => DistrictAssembliesScreen(
+                      districtId: user?.districtId,
+                      districtName: user?.districtName,
+                    ),
+                  ),
+                );
+              },
+            ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () => ref.read(projectsListProvider.notifier).refresh(),
@@ -336,9 +352,9 @@ class _ProjectsListScreenState extends ConsumerState<ProjectsListScreen> {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.background,
-        border: const Border(bottom: BorderSide(color: AppColors.border)),
+      decoration: const BoxDecoration(
+        color: AppColors.white,
+        border: Border(bottom: BorderSide(color: AppColors.border)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -351,7 +367,7 @@ class _ProjectsListScreenState extends ConsumerState<ProjectsListScreen> {
                   const Icon(Icons.church, color: AppColors.navy, size: 20),
                   const SizedBox(width: 8),
                   Text(
-                    'My District Overview',
+                    user.districtName ?? 'My District',
                     style: GoogleFonts.sourceSerif4(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -362,10 +378,19 @@ class _ProjectsListScreenState extends ConsumerState<ProjectsListScreen> {
               ),
               if (districtId.isNotEmpty)
                 TextButton.icon(
-                  onPressed: () => _showAddAssemblyDialog(context, districtId),
-                  icon: const Icon(Icons.add, size: 18, color: AppColors.navy),
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => DistrictAssembliesScreen(
+                          districtId: districtId,
+                          districtName: user.districtName,
+                        ),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.home_work_outlined, size: 16, color: AppColors.navy),
                   label: const Text(
-                    'Add Assembly',
+                    'Assemblies',
                     style: TextStyle(
                       color: AppColors.navy,
                       fontWeight: FontWeight.bold,
@@ -383,20 +408,60 @@ class _ProjectsListScreenState extends ConsumerState<ProjectsListScreen> {
             ),
             error: (_, _) => const SizedBox.shrink(),
             data: (assemblies) {
-              if (assemblies.isEmpty) {
-                return const Text(
-                  'No assemblies registered yet.',
-                  style: TextStyle(fontSize: 12, color: AppColors.softGrey),
+              final activeAssemblies = assemblies.where((a) => a.isActive).toList();
+
+              if (activeAssemblies.isEmpty) {
+                return Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.warningFill,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.warningBorder),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.info_outline, color: AppColors.warningText, size: 20),
+                      const SizedBox(width: 10),
+                      const Expanded(
+                        child: Text(
+                          'No active assemblies yet.',
+                          style: TextStyle(fontSize: 12, color: AppColors.warningText, fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.navy,
+                          foregroundColor: AppColors.white,
+                          shape: const StadiumBorder(),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          minimumSize: const Size(60, 32),
+                        ),
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => DistrictAssembliesScreen(
+                                districtId: districtId,
+                                districtName: user.districtName,
+                              ),
+                            ),
+                          );
+                        },
+                        child: const Text('Add assembly', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                      ),
+                    ],
+                  ),
                 );
               }
+
               return Wrap(
                 spacing: 6,
                 runSpacing: 6,
-                children: assemblies.map((a) {
+                children: activeAssemblies.map((a) {
                   return Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: AppColors.white,
+                      color: AppColors.background,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: AppColors.border),
                     ),
@@ -411,59 +476,6 @@ class _ProjectsListScreenState extends ConsumerState<ProjectsListScreen> {
           ),
         ],
       ),
-    );
-  }
-
-  void _showAddAssemblyDialog(BuildContext context, String districtId) {
-    final controller = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (dialogCtx) {
-        return AlertDialog(
-          title: const Text('Add Local Assembly'),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            decoration: const InputDecoration(
-              labelText: 'Assembly Name',
-              hintText: 'e.g. Grace Assembly',
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogCtx).pop(),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.navy, foregroundColor: AppColors.white),
-              onPressed: () async {
-                final name = controller.text.trim();
-                if (name.isNotEmpty) {
-                  final messenger = ScaffoldMessenger.of(context);
-                  Navigator.of(dialogCtx).pop();
-                  try {
-                    await ref.read(districtsListProvider.notifier).addAssembly(districtId, name);
-                    messenger.showSnackBar(
-                      SnackBar(
-                        content: Text('Assembly "$name" added successfully.'),
-                        backgroundColor: AppColors.success,
-                      ),
-                    );
-                  } catch (e) {
-                    messenger.showSnackBar(
-                      SnackBar(
-                        content: Text('Error adding assembly: $e'),
-                        backgroundColor: AppColors.error,
-                      ),
-                    );
-                  }
-                }
-              },
-              child: const Text('Add Assembly'),
-            ),
-          ],
-        );
-      },
     );
   }
 }

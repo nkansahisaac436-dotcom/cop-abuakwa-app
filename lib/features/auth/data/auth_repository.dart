@@ -6,6 +6,7 @@ import '../../../core/network/supabase_client.dart';
 import '../domain/models/profile_model.dart';
 import '../domain/models/invite_model.dart';
 import '../../districts/data/districts_repository.dart';
+import '../../districts/domain/models/district_model.dart';
 
 abstract class AuthRepository {
   Future<UserProfile> signIn({
@@ -78,6 +79,17 @@ class SupabaseAuthRepository implements AuthRepository {
 
   // Mock in-memory profiles for offline / local testing
   static UserProfile? _currentMockUser;
+  static UserProfile? get currentMockUser => _currentMockUser;
+
+  static void updateCurrentMockUser(UserProfile user) {
+    _currentMockUser = user;
+    final idx = _mockUsers.indexWhere((u) => u.id == user.id);
+    if (idx != -1) {
+      _mockUsers[idx] = user;
+    } else {
+      _mockUsers.add(user);
+    }
+  }
 
   static void resetMockState() {
     _currentMockUser = null;
@@ -146,8 +158,21 @@ class SupabaseAuthRepository implements AuthRepository {
       // Verify selected role matches real role
       _validateRoleMatch(user.role, selectedRole);
 
-      _currentMockUser = user;
-      return user;
+      // Refresh district status if pastor
+      var resolvedUser = user;
+      if (user.districtId != null) {
+        final dist = await _districtsRepo.getDistrictById(user.districtId!);
+        if (dist != null) {
+          resolvedUser = user.copyWith(
+            districtName: dist.name,
+            districtStatus: dist.status,
+          );
+          updateCurrentMockUser(resolvedUser);
+        }
+      }
+
+      _currentMockUser = resolvedUser;
+      return resolvedUser;
     }
 
     try {
@@ -171,7 +196,6 @@ class SupabaseAuthRepository implements AuthRepository {
       try {
         _validateRoleMatch(profile.role, selectedRole);
       } catch (roleError) {
-        // Sign user out of this attempt
         await _sb.auth.signOut();
         rethrow;
       }
@@ -233,6 +257,12 @@ class SupabaseAuthRepository implements AuthRepository {
       throw Exception(AppStrings.districtInactiveBlockedToast);
     }
 
+    // Check that district has active assemblies
+    final assemblies = await _districtsRepo.getAssembliesForDistrict(districtId, activeOnly: true);
+    if (assemblies.isEmpty) {
+      throw Exception('Your pastor has not added assemblies yet. Please try again soon.');
+    }
+
     // 2. Demo / Mock Mode Registration
     if (!SupabaseConfig.isInitialized) {
       final newMember = UserProfile(
@@ -242,6 +272,8 @@ class SupabaseAuthRepository implements AuthRepository {
         role: UserRole.member,
         status: ProfileStatus.active,
         districtId: districtId,
+        districtName: district.name,
+        districtStatus: DistrictStatus.active,
         assemblyId: assemblyId,
         createdAt: DateTime.now(),
       );
@@ -275,6 +307,8 @@ class SupabaseAuthRepository implements AuthRepository {
         role: UserRole.member,
         status: ProfileStatus.active,
         districtId: districtId,
+        districtName: district.name,
+        districtStatus: DistrictStatus.active,
         assemblyId: assemblyId,
         createdAt: DateTime.now(),
       );
@@ -311,7 +345,6 @@ class SupabaseAuthRepository implements AuthRepository {
         throw Exception('This code is not valid. Ask your Area Head for a new one.');
       }
 
-      // Reset failed attempts on success
       _failedInviteAttempts = 0;
       _inviteLockoutUntil = null;
       return match;
@@ -386,6 +419,8 @@ class SupabaseAuthRepository implements AuthRepository {
         role: verified.role,
         status: ProfileStatus.active,
         districtId: verified.districtId,
+        districtName: verified.districtName,
+        districtStatus: verified.districtId != null ? DistrictStatus.active : null,
         createdAt: DateTime.now(),
       );
 
@@ -411,7 +446,6 @@ class SupabaseAuthRepository implements AuthRepository {
         throw Exception('Account activation failed. Please try again.');
       }
 
-      // Call redeem_invite RPC
       await _sb.rpc('redeem_invite', params: {
         'p_code': verified.code,
         'p_user_id': user.id,
@@ -428,6 +462,8 @@ class SupabaseAuthRepository implements AuthRepository {
             role: verified.role,
             status: ProfileStatus.active,
             districtId: verified.districtId,
+            districtName: verified.districtName,
+            districtStatus: verified.districtId != null ? DistrictStatus.active : null,
             createdAt: DateTime.now(),
           );
     } catch (e) {
@@ -553,9 +589,7 @@ class SupabaseAuthRepository implements AuthRepository {
       final updated = currentProfile.copyWith(
         avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500',
       );
-      _currentMockUser = updated;
-      final idx = _mockUsers.indexWhere((u) => u.id == currentProfile.id);
-      if (idx != -1) _mockUsers[idx] = updated;
+      updateCurrentMockUser(updated);
       return updated;
     }
 
@@ -599,9 +633,7 @@ class SupabaseAuthRepository implements AuthRepository {
     );
 
     if (!SupabaseConfig.isInitialized) {
-      _currentMockUser = updated;
-      final idx = _mockUsers.indexWhere((u) => u.id == currentProfile.id);
-      if (idx != -1) _mockUsers[idx] = updated;
+      updateCurrentMockUser(updated);
       return updated;
     }
 
@@ -621,7 +653,7 @@ class SupabaseAuthRepository implements AuthRepository {
   }
 
   static String _generateRandomInviteCode() {
-    const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'; // Excludes 0, 1, I, O to avoid confusion
+    const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
     final rnd = Random.secure();
     final p1 = List.generate(4, (_) => chars[rnd.nextInt(chars.length)]).join();
     final p2 = List.generate(2, (_) => chars[rnd.nextInt(chars.length)]).join();
@@ -674,6 +706,15 @@ class SupabaseAuthRepository implements AuthRepository {
   @override
   Future<UserProfile?> getCurrentProfile() async {
     if (!SupabaseConfig.isInitialized) {
+      if (_currentMockUser != null && _currentMockUser!.districtId != null) {
+        final dist = await _districtsRepo.getDistrictById(_currentMockUser!.districtId!);
+        if (dist != null) {
+          _currentMockUser = _currentMockUser!.copyWith(
+            districtName: dist.name,
+            districtStatus: dist.status,
+          );
+        }
+      }
       return _currentMockUser;
     }
 
@@ -685,7 +726,7 @@ class SupabaseAuthRepository implements AuthRepository {
 
   Future<UserProfile?> _fetchProfileById(String userId) async {
     try {
-      final res = await _sb.from('profiles').select().eq('id', userId).maybeSingle();
+      final res = await _sb.from('profiles').select('*, districts(id, name, status)').eq('id', userId).maybeSingle();
       if (res == null) return null;
       return UserProfile.fromJson(res);
     } catch (e) {

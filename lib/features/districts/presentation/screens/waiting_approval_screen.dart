@@ -37,6 +37,15 @@ class WaitingApprovalScreen extends ConsumerWidget {
         title: const Text('District Registration Status'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Refresh Status',
+            onPressed: () async {
+              ref.invalidate(pastorRegisteredDistrictProvider);
+              await ref.read(authStateProvider.notifier).refreshProfile();
+              await ref.read(districtsListProvider.notifier).refresh();
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.person_outline),
             tooltip: 'My Profile',
             onPressed: () => context.push('/profile'),
@@ -52,6 +61,7 @@ class WaitingApprovalScreen extends ConsumerWidget {
         child: RefreshIndicator(
           onRefresh: () async {
             ref.invalidate(pastorRegisteredDistrictProvider);
+            await ref.read(authStateProvider.notifier).refreshProfile();
             await ref.read(districtsListProvider.notifier).refresh();
           },
           child: SingleChildScrollView(
@@ -120,14 +130,14 @@ class WaitingApprovalScreen extends ConsumerWidget {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          '${district.name} is now approved and active. You can now post projects, events, and pastoral thoughts.',
+                          '${district.name} is now approved and active. You can now manage your assemblies, post projects, events, and pastoral thoughts.',
                           textAlign: TextAlign.center,
                           style: const TextStyle(fontSize: 14, color: AppColors.text),
                         ),
                         const SizedBox(height: 24),
                         PrimaryButton(
                           text: 'Go to Pastor Home',
-                          onPressed: () => context.go('/pastor'),
+                          onPressed: () => context.go('/pastor-home'),
                         ),
                       ],
                     ),
@@ -260,37 +270,12 @@ class WaitingApprovalScreen extends ConsumerWidget {
                             ),
                             const SizedBox(height: 12),
                           ],
-                          if (district.assemblyNames != null && district.assemblyNames!.isNotEmpty) ...[
-                            const Row(
-                              children: [
-                                Icon(Icons.home_work_outlined, size: 18, color: AppColors.navy),
-                                SizedBox(width: 8),
-                                Text(
-                                  'Assemblies:',
-                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.text),
-                                ),
-                              ],
+                          if (district.startDate != null)
+                            _buildDetailRow(
+                              'Tenure Start Date',
+                              DateFormat.yMMMd().format(district.startDate!),
+                              Icons.event,
                             ),
-                            const SizedBox(height: 6),
-                            Wrap(
-                              spacing: 6,
-                              runSpacing: 6,
-                              children: district.assemblyNames!.map((asm) {
-                                return Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.background,
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(color: AppColors.border),
-                                  ),
-                                  child: Text(
-                                    asm,
-                                    style: const TextStyle(fontSize: 12, color: AppColors.text),
-                                  ),
-                                );
-                              }).toList(),
-                            ),
-                          ],
                         ],
                       ),
                     ),
@@ -306,7 +291,7 @@ class WaitingApprovalScreen extends ConsumerWidget {
                               builder: (_) => RegisterDistrictScreen(
                                 initialDistrictId: district.id,
                                 initialName: district.name,
-                                initialAssemblies: district.assemblyNames,
+                                initialStartDate: district.startDate,
                               ),
                             ),
                           );
@@ -327,7 +312,7 @@ class WaitingApprovalScreen extends ConsumerWidget {
                     const SizedBox(height: 16),
 
                     const Text(
-                      'Note: While pending approval, you can update your profile photo and personal details. Creating district posts, projects, and events will be unlocked once approved.',
+                      'Note: While pending approval, you can update your profile photo and personal details. Managing assemblies, district posts, projects, and events will be unlocked once approved.',
                       textAlign: TextAlign.center,
                       style: TextStyle(fontSize: 12, color: AppColors.softGrey, height: 1.4),
                     ),

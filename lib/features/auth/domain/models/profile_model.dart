@@ -1,3 +1,5 @@
+import '../../../districts/domain/models/district_model.dart';
+
 enum UserRole {
   areaHead('area_head'),
   pastor('pastor'),
@@ -53,6 +55,7 @@ class UserProfile {
   final ProfileStatus status;
   final String? districtId;
   final String? districtName;
+  final DistrictStatus? districtStatus;
   final String? assemblyId;
   final String? ministryName;
   final String? avatarUrl;
@@ -68,6 +71,7 @@ class UserProfile {
     this.status = ProfileStatus.active,
     this.districtId,
     this.districtName,
+    this.districtStatus,
     this.assemblyId,
     this.ministryName,
     this.avatarUrl,
@@ -90,6 +94,7 @@ class UserProfile {
     ProfileStatus? status,
     String? districtId,
     String? districtName,
+    DistrictStatus? districtStatus,
     String? assemblyId,
     String? ministryName,
     String? avatarUrl,
@@ -105,6 +110,7 @@ class UserProfile {
       status: status ?? this.status,
       districtId: districtId ?? this.districtId,
       districtName: districtName ?? this.districtName,
+      districtStatus: districtStatus ?? this.districtStatus,
       assemblyId: assemblyId ?? this.assemblyId,
       ministryName: ministryName ?? this.ministryName,
       avatarUrl: avatarUrl ?? this.avatarUrl,
@@ -114,6 +120,17 @@ class UserProfile {
   }
 
   factory UserProfile.fromJson(Map<String, dynamic> json) {
+    String? dName = json['district_name'] as String?;
+    DistrictStatus? dStatus;
+
+    if (json['districts'] != null && json['districts'] is Map) {
+      final dMap = json['districts'] as Map<String, dynamic>;
+      if (dName == null) dName = dMap['name'] as String?;
+      dStatus = DistrictStatus.fromString(dMap['status'] as String?);
+    } else if (json['district_status'] != null) {
+      dStatus = DistrictStatus.fromString(json['district_status'] as String?);
+    }
+
     return UserProfile(
       id: json['id'] as String,
       fullName: json['full_name'] as String? ?? '',
@@ -122,7 +139,8 @@ class UserProfile {
       role: UserRole.fromString(json['role'] as String?),
       status: ProfileStatus.fromString(json['status'] as String?),
       districtId: json['district_id'] as String?,
-      districtName: json['district_name'] as String?,
+      districtName: dName,
+      districtStatus: dStatus,
       assemblyId: json['assembly_id'] as String?,
       ministryName: json['ministry_name'] as String?,
       avatarUrl: json['avatar_url'] as String?,
@@ -143,6 +161,7 @@ class UserProfile {
       'status': status.value,
       'district_id': districtId,
       'district_name': districtName,
+      'district_status': districtStatus?.value,
       'assembly_id': assemblyId,
       'ministry_name': ministryName,
       'avatar_url': avatarUrl,

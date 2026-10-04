@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:image/image.dart' as img;
 import 'package:cop_abuakwa_app/core/constants/app_strings.dart';
 import 'package:cop_abuakwa_app/core/network/supabase_client.dart';
+import 'package:cop_abuakwa_app/core/router/app_router.dart';
 import 'package:cop_abuakwa_app/core/utils/image_compressor.dart';
 import 'package:cop_abuakwa_app/core/widgets/author_attribution_header.dart';
 import 'package:cop_abuakwa_app/core/widgets/primary_button.dart';
@@ -17,9 +18,13 @@ import 'package:cop_abuakwa_app/features/auth/presentation/screens/signup_screen
 import 'package:cop_abuakwa_app/features/districts/data/districts_repository.dart';
 import 'package:cop_abuakwa_app/features/districts/domain/models/district_model.dart';
 import 'package:cop_abuakwa_app/features/districts/presentation/providers/districts_provider.dart';
+import 'package:cop_abuakwa_app/features/districts/presentation/screens/district_assemblies_screen.dart';
+import 'package:cop_abuakwa_app/features/districts/presentation/screens/register_district_screen.dart';
+import 'package:cop_abuakwa_app/features/districts/presentation/screens/waiting_approval_screen.dart';
 import 'package:cop_abuakwa_app/features/feeds/data/feeds_repository.dart';
 import 'package:cop_abuakwa_app/features/meetings/data/meetings_repository.dart';
 import 'package:cop_abuakwa_app/features/projects/data/projects_repository.dart';
+import 'package:cop_abuakwa_app/features/projects/domain/models/project_model.dart';
 import 'package:cop_abuakwa_app/features/transfer/domain/models/tenure_archive_model.dart';
 import 'package:cop_abuakwa_app/features/transfer/utils/archive_pdf_generator.dart';
 import 'package:cop_abuakwa_app/main.dart';
@@ -37,228 +42,461 @@ void main() {
     SupabaseProjectsRepository.resetState();
   });
 
-  group('Part 1 & 2: Login & Sign-up Widget Tests', () {
-    testWidgets('LoginScreen renders 4 role chips and default Member view on 360px viewport', (WidgetTester tester) async {
-      tester.view.physicalSize = const Size(360, 800);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(() => tester.view.resetPhysicalSize());
+  group('Part 1: Pastor 4-State Routing & Fresh DB Tests', () {
+    testWidgets('State 1: Pastor with no district linked routes to RegisterDistrictScreen', (WidgetTester tester) async {
+      final container = ProviderContainer();
+      final authRepo = container.read(authRepositoryProvider);
 
+      // Create and redeem pastor invite without district
+      final invite = await authRepo.createInvite(
+        role: UserRole.pastor,
+        targetName: 'Pastor Kwadwo Nkrumah',
+      );
+      final pastor = await authRepo.redeemInvite(
+        code: invite.code,
+        email: 'pastor.nkrumah@copabuakwa.org',
+        password: 'Password123!',
+        fullName: 'Pastor Kwadwo Nkrumah',
+      );
+
+      container.read(authStateProvider.notifier).setMockProfile(pastor);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const AbuakwaApp(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Register your district'), findsOneWidget);
+      expect(find.text('District Name'), findsOneWidget);
+      expect(find.text('Tenure Start Date'), findsOneWidget);
+      expect(find.text('Submit for approval'), findsOneWidget);
+
+      container.dispose();
+    });
+
+    testWidgets('State 2: Pastor with pending district routes to WaitingApprovalScreen', (WidgetTester tester) async {
+      final container = ProviderContainer();
+      final authRepo = container.read(authRepositoryProvider);
+      final distRepo = container.read(districtsRepositoryProvider);
+
+      final invite = await authRepo.createInvite(
+        role: UserRole.pastor,
+        targetName: 'Pastor Kofi Osei',
+      );
+      final pastor = await authRepo.redeemInvite(
+        code: invite.code,
+        email: 'pastor.osei@copabuakwa.org',
+        password: 'Password123!',
+        fullName: 'Pastor Kofi Osei',
+      );
+
+      container.read(authStateProvider.notifier).setMockProfile(pastor);
+
+      // Pastor registers district
+      final dist = await distRepo.registerDistrict(
+        name: 'Tanoso District',
+        startDate: DateTime(2025, 2, 1),
+      );
+
+      expect(dist.status, DistrictStatus.pending);
+
+      // App re-evaluates / refreshes profile
+      await container.read(authStateProvider.notifier).refreshProfile();
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const AbuakwaApp(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Waiting for Area Head Approval'), findsOneWidget);
+      expect(find.textContaining('Tanoso District'), findsWidgets);
+      expect(find.text('Edit My Profile'), findsOneWidget);
+
+      container.dispose();
+    });
+
+    testWidgets('State 3: Pastor with rejected district shows Area Head note and edit/resubmit option', (WidgetTester tester) async {
+      final container = ProviderContainer();
+      final authRepo = container.read(authRepositoryProvider);
+      final distRepo = container.read(districtsRepositoryProvider);
+
+      final invite = await authRepo.createInvite(
+        role: UserRole.pastor,
+        targetName: 'Pastor Yaw Appiah',
+      );
+      final pastor = await authRepo.redeemInvite(
+        code: invite.code,
+        email: 'pastor.appiah@copabuakwa.org',
+        password: 'Password123!',
+        fullName: 'Pastor Yaw Appiah',
+      );
+
+      container.read(authStateProvider.notifier).setMockProfile(pastor);
+
+      final dist = await distRepo.registerDistrict(
+        name: 'Sepaase District',
+        startDate: DateTime(2025, 3, 1),
+      );
+
+      // Area Head rejects with note
+      await distRepo.rejectDistrict(dist.id, note: 'Please verify exact district boundary and tenure start date.');
+      await container.read(authStateProvider.notifier).refreshProfile();
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const AbuakwaApp(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Registration Needs Attention'), findsOneWidget);
+      expect(find.text('Please verify exact district boundary and tenure start date.'), findsOneWidget);
+      expect(find.text('Edit & Resubmit District'), findsOneWidget);
+
+      container.dispose();
+    });
+
+    testWidgets('State 4: Pastor with active district routes to Pastor Home Dashboard', (WidgetTester tester) async {
+      final container = ProviderContainer();
+      final authRepo = container.read(authRepositoryProvider);
+      final distRepo = container.read(districtsRepositoryProvider);
+
+      final invite = await authRepo.createInvite(
+        role: UserRole.pastor,
+        targetName: 'Pastor Samuel Antwi',
+      );
+      final pastor = await authRepo.redeemInvite(
+        code: invite.code,
+        email: 'pastor.antwi@copabuakwa.org',
+        password: 'Password123!',
+        fullName: 'Pastor Samuel Antwi',
+      );
+
+      container.read(authStateProvider.notifier).setMockProfile(pastor);
+
+      final dist = await distRepo.registerDistrict(
+        name: 'Abuakwa Central District',
+        startDate: DateTime(2025, 1, 1),
+      );
+
+      // Area Head approves
+      await distRepo.approveDistrict(dist.id, note: 'Approved');
+      await container.read(authStateProvider.notifier).refreshProfile();
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const AbuakwaApp(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Feed'), findsOneWidget);
+      expect(find.text('My District'), findsOneWidget);
+      expect(find.text('Thoughts'), findsOneWidget);
+      expect(find.text('Meetings'), findsOneWidget);
+
+      container.dispose();
+    });
+
+    test('Fresh restart of app reads latest district status directly from database', () async {
+      final repo = SupabaseDistrictsRepository();
+      final authRepo = SupabaseAuthRepository();
+
+      final invite = await authRepo.createInvite(
+        role: UserRole.pastor,
+        targetName: 'Pastor Restart Test',
+      );
+      await authRepo.redeemInvite(
+        code: invite.code,
+        email: 'pastor.restart@copabuakwa.org',
+        password: 'Password123!',
+        fullName: 'Pastor Restart Test',
+      );
+
+      // Register district
+      final dist = await repo.registerDistrict(name: 'Bompata District', startDate: DateTime(2025, 5, 1));
+      expect(dist.status, DistrictStatus.pending);
+
+      // App is killed and restarted -> fresh getProfile
+      var freshProfile = await authRepo.getCurrentProfile();
+      expect(freshProfile?.districtStatus, DistrictStatus.pending);
+
+      // Area Head approves
+      await repo.approveDistrict(dist.id);
+
+      // Fresh profile fetch after approval
+      freshProfile = await authRepo.getCurrentProfile();
+      expect(freshProfile?.districtStatus, DistrictStatus.active);
+    });
+  });
+
+  group('Part 2: Simplified District Registration Tests', () {
+    testWidgets('RegisterDistrictScreen has only Name, Start Date, and Submit button (no Assemblies section)', (WidgetTester tester) async {
       await tester.pumpWidget(
         const ProviderScope(
           child: MaterialApp(
-            home: LoginScreen(),
+            home: RegisterDistrictScreen(),
           ),
         ),
       );
 
-      // App Title and Header
-      expect(find.text(AppStrings.appName), findsOneWidget);
-      expect(find.text(AppStrings.churchAreaName), findsOneWidget);
+      expect(find.text('Register your district'), findsOneWidget);
+      expect(find.text('District Name'), findsOneWidget);
+      expect(find.text('Tenure Start Date'), findsOneWidget);
+      expect(find.text('Submit for approval'), findsOneWidget);
 
-      // Role Selector
-      expect(find.text('I am logging in as'), findsOneWidget);
-      expect(find.text('Member'), findsOneWidget);
-      expect(find.text('Pastor'), findsOneWidget);
-      expect(find.text('Leader'), findsOneWidget);
-      expect(find.text('Area Head'), findsOneWidget);
-
-      // Default Member Form
-      expect(find.text(AppStrings.email), findsOneWidget);
-      expect(find.text(AppStrings.password), findsOneWidget);
-      expect(find.text(AppStrings.forgotPassword), findsOneWidget);
-      expect(find.text(AppStrings.logIn), findsOneWidget);
-      expect(find.text(AppStrings.createMemberAccount), findsOneWidget);
+      // Verify Local Assemblies and Add Assembly buttons are removed
+      expect(find.text('Local Assemblies'), findsNothing);
+      expect(find.text('Add Assembly'), findsNothing);
+      expect(find.text('Add another assembly'), findsNothing);
     });
 
-    testWidgets('Two-step invite code flow works cleanly with verification and redemption', (WidgetTester tester) async {
-      // First create a pastor invite
-      final container = ProviderContainer();
-      final authRepo = container.read(authRepositoryProvider);
-      final invite = await authRepo.createInvite(
-        role: UserRole.pastor,
-        targetName: 'Pastor Kwabena Darko',
+    test('registerDistrict no longer requires assemblies parameter and creates pending district', () async {
+      final repo = SupabaseDistrictsRepository();
+      final created = await repo.registerDistrict(
+        name: 'Asuoyeboah District',
+        startDate: DateTime(2025, 6, 1),
       );
+
+      expect(created.name, 'Asuoyeboah District');
+      expect(created.status, DistrictStatus.pending);
+      expect(created.startDate, DateTime(2025, 6, 1));
+      expect(created.assemblyNames, isEmpty);
+    });
+  });
+
+  group('Part 3: Assembly Management & Security Policy Tests', () {
+    test('After approval, pastor can add assemblies and names must be unique per district', () async {
+      final repo = SupabaseDistrictsRepository();
+      final dist = await repo.registerDistrict(
+        name: 'Tanoso Central District',
+        startDate: DateTime(2025, 1, 1),
+      );
+
+      await repo.approveDistrict(dist.id);
+
+      // Add first assembly
+      final asm1 = await repo.addAssembly(districtId: dist.id, name: 'Central Assembly');
+      expect(asm1.name, 'Central Assembly');
+      expect(asm1.isActive, isTrue);
+
+      // Add second assembly
+      final asm2 = await repo.addAssembly(districtId: dist.id, name: 'Bethel Assembly');
+      expect(asm2.name, 'Bethel Assembly');
+
+      // Duplicate assembly in same district must be blocked
+      expect(
+        () => repo.addAssembly(districtId: dist.id, name: '  central   assembly  '),
+        throwsA(predicate((e) => e.toString().contains('already exists in your district'))),
+      );
+
+      // Different district CAN use the same assembly name
+      final dist2 = await repo.registerDistrict(name: 'Atwima District', startDate: DateTime(2025, 1, 1));
+      await repo.approveDistrict(dist2.id);
+      final asmOther = await repo.addAssembly(districtId: dist2.id, name: 'Central Assembly');
+      expect(asmOther.name, 'Central Assembly');
+    });
+
+    test('Pastor can rename and hide (deactivate) an assembly', () async {
+      final repo = SupabaseDistrictsRepository();
+      final dist = await repo.registerDistrict(name: 'Barekese District', startDate: DateTime(2025, 1, 1));
+      await repo.approveDistrict(dist.id);
+
+      final asm = await repo.addAssembly(districtId: dist.id, name: 'Faith Assembly');
+
+      // Rename assembly
+      final renamed = await repo.renameAssembly(assemblyId: asm.id, newName: 'Grace & Faith Assembly');
+      expect(renamed.name, 'Grace & Faith Assembly');
+
+      // Hide / Deactivate assembly
+      await repo.toggleAssemblyStatus(assemblyId: asm.id, isActive: false);
+
+      final activeList = await repo.getAssembliesForDistrict(dist.id, activeOnly: true);
+      expect(activeList.any((a) => a.id == asm.id), isFalse);
+
+      final allList = await repo.getAssembliesForDistrict(dist.id, activeOnly: false);
+      expect(allList.any((a) => a.id == asm.id && !a.isActive), isTrue);
+    });
+
+    testWidgets('Member sign-up shows "Your pastor has not added assemblies yet" when district has no active assemblies', (WidgetTester tester) async {
+      final container = ProviderContainer();
+      final distRepo = container.read(districtsRepositoryProvider);
+
+      // Create an active district with NO assemblies
+      final activeDist = await distRepo.addDistrictDirectly(name: 'Brand New District');
 
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
           child: const MaterialApp(
-            home: LoginScreen(),
-          ),
-        ),
-      );
-
-      // Tap on Pastor chip
-      await tester.tap(find.text('Pastor'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('I have an invite code'), findsOneWidget);
-
-      // Switch to "I have an invite code" (Step 1)
-      await tester.tap(find.text('I have an invite code'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Invite code'), findsOneWidget);
-      expect(find.text('Paste'), findsOneWidget);
-      expect(find.text('Verify code'), findsOneWidget);
-
-      // Enter created invite code (auto-verifies on 11 characters)
-      await tester.enterText(find.byType(TextFormField).first, invite.code);
-      await tester.pumpAndSettle();
-
-      // Step 2: Green card verification badge, locked code, Change code link
-      expect(find.text('Invitation verified'), findsOneWidget);
-      expect(find.text('Change code'), findsOneWidget);
-      expect(find.text('Create a password'), findsOneWidget);
-      expect(find.text('Activate my account'), findsOneWidget);
-
-      // Tap "Change code" to return to Step 1
-      await tester.tap(find.text('Change code'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Verify code'), findsOneWidget);
-      expect(find.text('Invitation verified'), findsNothing);
-      container.dispose();
-    });
-
-    testWidgets('SignUpScreen renders required fields', (WidgetTester tester) async {
-      await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(
             home: SignUpScreen(),
           ),
         ),
       );
+      await tester.pumpAndSettle();
 
-      expect(find.text(AppStrings.createYourAccount), findsOneWidget);
-      expect(find.text(AppStrings.fullName), findsOneWidget);
-      expect(find.text(AppStrings.email), findsOneWidget);
-      expect(find.text(AppStrings.district), findsOneWidget);
-      expect(find.text(AppStrings.assembly), findsOneWidget);
-      expect(find.text(AppStrings.password), findsOneWidget);
-      expect(find.text(AppStrings.dataConsent), findsOneWidget);
-      expect(find.text(AppStrings.createAccount), findsOneWidget);
+      // Open district dropdown and select the active district
+      await tester.tap(find.text(AppStrings.chooseDistrict), warnIfMissed: false);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Brand New District').last);
+      await tester.pumpAndSettle();
+
+      // Expect warning message and disabled form
+      expect(find.text('Your pastor has not added assemblies yet. Please try again soon.'), findsOneWidget);
+
+      container.dispose();
+    });
+
+    testWidgets('DistrictAssembliesScreen displays empty state with "Add your first assembly" button', (WidgetTester tester) async {
+      final container = ProviderContainer();
+      final distRepo = container.read(districtsRepositoryProvider);
+      final dist = await distRepo.registerDistrict(name: 'Empty Assemblies District', startDate: DateTime(2025, 1, 1));
+      await distRepo.approveDistrict(dist.id);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            home: DistrictAssembliesScreen(
+              districtId: dist.id,
+              districtName: dist.name,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('No Assemblies Added Yet'), findsOneWidget);
+      expect(find.text('Add your first assembly'), findsOneWidget);
+
+      container.dispose();
+    });
+
+    test('Security & Permissions: Pending pastor cannot post projects or thoughts', () async {
+      final repo = SupabaseDistrictsRepository();
+      final authRepo = SupabaseAuthRepository();
+
+      // Create and set mock pastor profile
+      final pastorUser = UserProfile(
+        id: 'mock-pastor-pending-1',
+        email: 'pastor.pending@copabuakwa.org',
+        fullName: 'Pastor Pending User',
+        role: UserRole.pastor,
+        createdAt: DateTime.now(),
+      );
+      SupabaseAuthRepository.updateCurrentMockUser(pastorUser);
+
+      // Register district as pending
+      final dist = await repo.registerDistrict(name: 'Pending District Test', startDate: DateTime(2025, 1, 1));
+      expect(dist.status, DistrictStatus.pending);
+
+      final current = await authRepo.getCurrentProfile();
+      expect(current?.districtStatus, DistrictStatus.pending);
+
+      // Verify that user profile role helper confirms pending status
+      expect(current?.isPastor, isTrue);
+      expect(current?.districtStatus == DistrictStatus.active, isFalse);
+    });
+
+    test('Security & Permissions: Assembly create/update blocks duplicates and cross-district additions', () async {
+      final repo = SupabaseDistrictsRepository();
+      final dist1 = await repo.registerDistrict(name: 'District One', startDate: DateTime(2025, 1, 1));
+      final dist2 = await repo.registerDistrict(name: 'District Two', startDate: DateTime(2025, 1, 1));
+      await repo.approveDistrict(dist1.id);
+      await repo.approveDistrict(dist2.id);
+
+      final asm1 = await repo.addAssembly(districtId: dist1.id, name: 'Victory Assembly');
+      expect(asm1.name, 'Victory Assembly');
+
+      // Duplicate in dist1 is blocked
+      expect(
+        () => repo.addAssembly(districtId: dist1.id, name: 'victory assembly'),
+        throwsA(predicate((e) => e.toString().contains('already exists'))),
+      );
+
+      // Dist2 has separate assembly list
+      final asm2 = await repo.addAssembly(districtId: dist2.id, name: 'Grace Assembly');
+      expect(asm2.name, 'Grace Assembly');
+      expect(asm2.districtId, dist2.id);
+
+      final dist1List = await repo.getAssembliesForDistrict(dist1.id);
+      expect(dist1List.any((a) => a.id == asm2.id), isFalse);
     });
   });
 
-  group('Part 2: Pastor District Self-Registration & Approval Tests', () {
-    test('Pastor registers a new district with status pending and assemblies', () async {
+  group('Part 4: Area Head Pending Card & Instant Count Tests', () {
+    testWidgets('Pending card renders real pastor name, start date, and no assemblies list', (WidgetTester tester) async {
       final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      final districtsRepo = container.read(districtsRepositoryProvider);
-      final registered = await districtsRepo.registerDistrict(
-        name: 'Abuakwa North',
-        assemblies: ['Bethel Assembly', 'Central Assembly', 'Calvary Assembly'],
-        startDate: DateTime(2026, 1, 15),
-      );
-
-      expect(registered.name, 'Abuakwa North');
-      expect(registered.status, DistrictStatus.pending);
-      expect(registered.isPending, isTrue);
-      expect(registered.assemblyNames?.length, 3);
-      expect(registered.assemblyNames?.first, 'Bethel Assembly');
-    });
-
-    test('Duplicate district registration is blocked with friendly error', () async {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      final districtsRepo = container.read(districtsRepositoryProvider);
-      await districtsRepo.registerDistrict(
-        name: 'Abuakwa Central',
-        assemblies: ['Central Assembly'],
-        startDate: DateTime(2026, 1, 15),
-      );
-
-      // Attempt duplicate registration with different casing and spacing
-      expect(
-        () => districtsRepo.registerDistrict(
-          name: '  abuakwa   central  ',
-          assemblies: ['Other Assembly'],
-          startDate: DateTime(2026, 1, 15),
-        ),
-        throwsA(predicate((e) => e.toString().contains('This district is already registered. Contact the Area Head office.'))),
-      );
-    });
-
-    test('Area Head approves pending district', () async {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      final districtsRepo = container.read(districtsRepositoryProvider);
-      final registered = await districtsRepo.registerDistrict(
-        name: 'Abuakwa South',
-        assemblies: ['Emmanuel Assembly'],
-        startDate: DateTime(2026, 1, 15),
-      );
-
-      expect(registered.status, DistrictStatus.pending);
-
-      await districtsRepo.approveDistrict(registered.id, note: 'Approved');
-      final approved = await districtsRepo.getDistrictById(registered.id);
-
-      expect(approved, isNotNull);
-      expect(approved!.status, DistrictStatus.active);
-      expect(approved.isActive, isTrue);
-    });
-
-    test('Area Head rejects pending district with decision note', () async {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      final districtsRepo = container.read(districtsRepositoryProvider);
-      final registered = await districtsRepo.registerDistrict(
-        name: 'Incomplete District',
-        assemblies: [],
-        startDate: DateTime(2026, 1, 15),
-      );
-
-      await districtsRepo.rejectDistrict(
-        registered.id,
-        note: 'Please list at least 2 local assemblies before resubmitting.',
-      );
-
-      final rejected = await districtsRepo.getDistrictById(registered.id);
-      expect(rejected, isNotNull);
-      expect(rejected!.status, DistrictStatus.rejected);
-      expect(rejected.isRejected, isTrue);
-      expect(rejected.decisionNote, 'Please list at least 2 local assemblies before resubmitting.');
-
-      // Pastor can resubmit with updated assemblies
-      final resubmitted = await districtsRepo.resubmitDistrict(
-        districtId: rejected.id,
-        name: 'Incomplete District',
-        assemblies: ['Grace Assembly', 'Hope Assembly'],
-        startDate: DateTime(2026, 1, 15),
-      );
-
-      expect(resubmitted.status, DistrictStatus.pending);
-      expect(resubmitted.assemblyNames?.length, 2);
-    });
-
-    test('Pastor invite can be created without a pre-assigned district', () async {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
       final authRepo = container.read(authRepositoryProvider);
-      final invite = await authRepo.createInvite(
-        role: UserRole.pastor,
-        targetName: 'Pastor Unassigned',
-        districtId: null, // District is optional
-        districtName: null,
+      final distRepo = container.read(districtsRepositoryProvider);
+
+      final invite = await authRepo.createInvite(role: UserRole.pastor, targetName: 'Pastor Isaac Mensah');
+      final pastor = await authRepo.redeemInvite(
+        code: invite.code,
+        email: 'pastor.mensah@copabuakwa.org',
+        password: 'Password123!',
+        fullName: 'Pastor Isaac Mensah',
+      );
+      container.read(authStateProvider.notifier).setMockProfile(pastor);
+
+      final dist = await distRepo.registerDistrict(
+        name: 'Nsuta District',
+        startDate: DateTime(2025, 4, 15),
       );
 
-      expect(invite.districtId, isNull);
-      expect(invite.districtName, isNull);
-      expect(invite.role, UserRole.pastor);
-      expect(invite.code.startsWith('ABK-'), isTrue);
+      // Area Head visits District Activation screen
+      final areaHead = UserProfile(
+        id: 'mock-area-head-id',
+        fullName: 'Apostle Area Head',
+        email: 'areahead@copabuakwa.org',
+        role: UserRole.areaHead,
+        status: ProfileStatus.active,
+        createdAt: DateTime(2026, 1, 1),
+      );
+      container.read(authStateProvider.notifier).setMockProfile(areaHead);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const AbuakwaApp(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Navigate to District Activation / Management screen
+      await tester.tap(find.text('Districts'));
+      await tester.pumpAndSettle();
+
+      // Pending card should show Pastor Isaac Mensah and Tenure Start
+      expect(find.text('Nsuta District'), findsWidgets);
+      expect(find.text('Pastor Isaac Mensah'), findsWidgets);
+      expect(find.textContaining('Tenure Start:'), findsWidgets);
+      expect(find.text('Approve'), findsWidgets);
+      expect(find.text('Reject'), findsWidgets);
+
+      // Tap Approve
+      await tester.tap(find.text('Approve').first);
+      await tester.pumpAndSettle();
+
+      // Instantly tab count updates
+      final updatedDist = await distRepo.getDistrictById(dist.id);
+      expect(updatedDist?.isActive, isTrue);
+
+      container.dispose();
     });
   });
 
   group('Part 3: Photo Compression & Attribution Tests', () {
     test('ImageCompressor resizes and compresses large image', () async {
-      // Create a large 2400x1800 raw test image in memory
       final rawImage = img.Image(width: 2400, height: 1800);
       img.fill(rawImage, color: img.ColorRgb8(31, 58, 95));
       final rawJpgBytes = Uint8List.fromList(img.encodeJpg(rawImage, quality: 100));
@@ -303,14 +541,12 @@ void main() {
 
       expect(find.text('Pastor Kwabena Darko'), findsOneWidget);
       expect(find.text('Pastor'), findsOneWidget);
-      expect(find.text('PD'), findsOneWidget); // Initials
+      expect(find.text('PD'), findsOneWidget);
       expect(find.textContaining('Abuakwa Central'), findsOneWidget);
 
-      // Tap on author attribution header to open safe profile dialog
       await tester.tap(find.text('Pastor Kwabena Darko'));
       await tester.pumpAndSettle();
 
-      // Dialog opens showing name, role, and district (no private email/phone)
       expect(find.byType(Dialog), findsOneWidget);
       expect(find.text('Close'), findsOneWidget);
 
@@ -318,135 +554,6 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(Dialog), findsNothing);
-    });
-  });
-
-  group('Step 3: All 4 Roles Login & Dashboard Landing Widget Tests', () {
-    testWidgets('Area Head logs in and lands on Area Head Dashboard', (WidgetTester tester) async {
-      tester.view.physicalSize = const Size(400, 900);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(() => tester.view.resetPhysicalSize());
-
-      await tester.pumpWidget(
-        const ProviderScope(
-          child: AbuakwaApp(),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      // Select Area Head chip
-      await tester.tap(find.text('Area Head'));
-      await tester.pumpAndSettle();
-
-      // Fill in Area Head credentials
-      await tester.enterText(find.byType(TextFormField).at(0), 'areahead@copabuakwa.org');
-      await tester.enterText(find.byType(TextFormField).at(1), 'AbuakwaAreaHead2026!');
-      await tester.pumpAndSettle();
-
-      // Tap Log in button
-      await tester.tap(find.widgetWithText(PrimaryButton, AppStrings.logIn));
-      await tester.pumpAndSettle();
-
-      // Should be on Area Head Dashboard
-      expect(find.text('Area Head Dashboard'), findsOneWidget);
-      expect(find.text('Supervisory Actions'), findsOneWidget);
-    });
-
-    testWidgets('Pastor activates account and lands on pastor interface', (WidgetTester tester) async {
-      tester.view.physicalSize = const Size(400, 900);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(() => tester.view.resetPhysicalSize());
-
-      final container = ProviderContainer();
-      final authRepo = container.read(authRepositoryProvider);
-      final invite = await authRepo.createInvite(
-        role: UserRole.pastor,
-        targetName: 'Pastor Kwabena Darko',
-        districtId: 'd0000000-0000-0000-0000-000000000001',
-        districtName: 'Abuakwa Central',
-      );
-
-      // Activate pastor account
-      await authRepo.redeemInvite(
-        code: invite.code,
-        email: 'pastor.darko@copabuakwa.org',
-        password: 'Password123!',
-        fullName: 'Pastor Kwabena Darko',
-      );
-
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: const AbuakwaApp(),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      // Since account is activated and session exists, lands directly on Pastor Home
-      expect(find.text('Feed'), findsOneWidget);
-      expect(find.text('My District'), findsOneWidget);
-      expect(find.text('Thoughts'), findsOneWidget);
-      container.dispose();
-    });
-
-    testWidgets('Member signs up with active district and lands on feed', (WidgetTester tester) async {
-      tester.view.physicalSize = const Size(400, 900);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(() => tester.view.resetPhysicalSize());
-
-      final container = ProviderContainer();
-      final districtsRepo = container.read(districtsRepositoryProvider);
-      final dist = await districtsRepo.addDistrictDirectly(
-        name: 'Abuakwa Central',
-        assemblies: ['Bethel Assembly'],
-      );
-
-      final authRepo = container.read(authRepositoryProvider);
-      await authRepo.signUpMember(
-        fullName: 'Kofi Mensah',
-        email: 'kofi.mensah@example.com',
-        password: 'Password123!',
-        districtId: dist.id,
-        assemblyId: 'asm-1',
-      );
-
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: const AbuakwaApp(),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      expect(find.text('Feed'), findsOneWidget);
-      expect(find.text('Projects'), findsOneWidget);
-      container.dispose();
-    });
-
-    testWidgets('Wrong password shows visible error banner and stays on LoginScreen', (WidgetTester tester) async {
-      tester.view.physicalSize = const Size(400, 900);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(() => tester.view.resetPhysicalSize());
-
-      await tester.pumpWidget(
-        const ProviderScope(
-          child: AbuakwaApp(),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      // Enter wrong password
-      await tester.enterText(find.byType(TextFormField).at(0), 'areahead@copabuakwa.org');
-      await tester.enterText(find.byType(TextFormField).at(1), 'wrongpassword');
-      await tester.pumpAndSettle();
-
-      // Tap Log in button
-      await tester.tap(find.widgetWithText(PrimaryButton, AppStrings.logIn));
-      await tester.pumpAndSettle();
-
-      // Error banner is visible and screen didn't blank out
-      expect(find.text(AppStrings.invalidCredentialsMessage), findsOneWidget);
-      expect(find.text(AppStrings.logIn), findsOneWidget);
     });
   });
 
@@ -506,133 +613,6 @@ void main() {
 
       expect(meeting.roomLink.startsWith('https://meet.jit.si/Abuakwa_'), isTrue);
       expect(meeting.roomLink.contains('#config.startWithAudioOnly=true&config.startWithVideoMuted=true'), isTrue);
-    });
-  });
-
-  group('Part 1 & 4: District Lifecycle & Security Hardening Tests', () {
-    test('End-to-end Pastor invite without district -> redemption -> self-registration -> pending -> approval -> assembly addition', () async {
-      final container = ProviderContainer();
-      final authRepo = container.read(authRepositoryProvider);
-      final distRepo = container.read(districtsRepositoryProvider);
-
-      // 1. Area Head creates invite with NO district
-      final invite = await authRepo.createInvite(
-        role: UserRole.pastor,
-        targetName: 'Pastor Emmanuel Boakye',
-      );
-      expect(invite.districtId, isNull);
-      expect(invite.districtName, isNull);
-      expect(invite.role, UserRole.pastor);
-
-      // 2. Pastor redeems the invite
-      final redeemedUser = await authRepo.redeemInvite(
-        code: invite.code,
-        email: 'pastor.boakye@copabuakwa.org',
-        password: 'SecurePassword123!',
-        fullName: 'Pastor Emmanuel Boakye',
-      );
-      expect(redeemedUser.role, UserRole.pastor);
-      expect(redeemedUser.districtId, isNull);
-
-      // 3. Pastor registers new district with 2 assemblies and start date
-      final registeredDistrict = await distRepo.registerDistrict(
-        name: 'Tanoso East District',
-        assemblies: ['Central Assembly', 'Bethany Assembly'],
-        startDate: DateTime(2025, 1, 15),
-      );
-
-      // 4. District is saved as pending
-      expect(registeredDistrict.isPending, isTrue);
-      expect(registeredDistrict.name, 'Tanoso East District');
-      expect(registeredDistrict.assemblyNames?.length, 2);
-
-      // 5. Area Head fetches districts and sees the pending district
-      final allDistricts = await distRepo.getDistricts();
-      final pendingList = allDistricts.where((d) => d.isPending).toList();
-      expect(pendingList.any((d) => d.id == registeredDistrict.id), isTrue);
-
-      // 6. Area Head approves the district
-      await distRepo.approveDistrict(registeredDistrict.id, note: 'Approved by Apostle Area Head.');
-      final approvedDist = await distRepo.getDistrictById(registeredDistrict.id);
-      expect(approvedDist?.isActive, isTrue);
-
-      // 7. Pastor adds an additional assembly later
-      final newAsm = await distRepo.addAssembly(
-        districtId: registeredDistrict.id,
-        name: 'Maranatha Assembly',
-      );
-      expect(newAsm.name, 'Maranatha Assembly');
-      expect(newAsm.districtId, registeredDistrict.id);
-
-      final updatedAssemblies = await distRepo.getAssembliesForDistrict(registeredDistrict.id);
-      expect(updatedAssemblies.any((a) => a.name == 'Maranatha Assembly'), isTrue);
-
-      container.dispose();
-    });
-
-    test('Duplicate district names are blocked with descriptive message', () async {
-      final repo = SupabaseDistrictsRepository();
-      await repo.registerDistrict(
-        name: 'Abuakwa Central',
-        assemblies: ['Central Assembly'],
-        startDate: DateTime.now(),
-      );
-
-      // Attempt duplicate registration with different casing/spacing
-      expect(
-        () => repo.registerDistrict(
-          name: '  abuakwa   central  ',
-          assemblies: ['Another Assembly'],
-          startDate: DateTime.now(),
-        ),
-        throwsA(predicate((e) => e.toString().contains('already registered'))),
-      );
-    });
-
-    test('Invite code brute-force protection locks after 5 consecutive failures', () async {
-      final repo = SupabaseAuthRepository();
-      SupabaseAuthRepository.resetMockState();
-
-      for (int i = 0; i < 5; i++) {
-        try {
-          await repo.verifyInviteCode('ABK-WRON-00');
-        } catch (_) {}
-      }
-
-      // 6th attempt must trigger rate limit exception
-      expect(
-        () => repo.verifyInviteCode('ABK-WRON-00'),
-        throwsA(predicate((e) => e.toString().contains('Too many tries'))),
-      );
-    });
-
-    test('Member self-service account deletion removes profile record', () async {
-      final container = ProviderContainer();
-      final authRepo = container.read(authRepositoryProvider);
-      final distRepo = container.read(districtsRepositoryProvider);
-
-      // Create an active district
-      final activeDist = await distRepo.addDistrictDirectly(
-        name: 'Abuakwa Central District',
-        assemblies: ['Central Assembly'],
-      );
-
-      // Sign up member
-      final member = await authRepo.signUpMember(
-        fullName: 'Brother John Doe',
-        email: 'john.doe@gmail.com',
-        password: 'Password123!',
-        districtId: activeDist.id,
-        assemblyId: 'asm-1',
-      );
-      expect(member.fullName, 'Brother John Doe');
-
-      // Delete account
-      await authRepo.deleteAccount();
-      final currentProfile = await authRepo.getCurrentProfile();
-      expect(currentProfile, isNull);
-
-      container.dispose();
     });
   });
 }

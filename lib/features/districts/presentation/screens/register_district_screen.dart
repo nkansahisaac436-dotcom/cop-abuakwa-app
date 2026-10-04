@@ -12,13 +12,13 @@ import '../providers/districts_provider.dart';
 class RegisterDistrictScreen extends ConsumerStatefulWidget {
   final String? initialDistrictId;
   final String? initialName;
-  final List<String>? initialAssemblies;
+  final DateTime? initialStartDate;
 
   const RegisterDistrictScreen({
     super.key,
     this.initialDistrictId,
     this.initialName,
-    this.initialAssemblies,
+    this.initialStartDate,
   });
 
   @override
@@ -28,8 +28,7 @@ class RegisterDistrictScreen extends ConsumerStatefulWidget {
 class _RegisterDistrictScreenState extends ConsumerState<RegisterDistrictScreen> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _districtNameController;
-  final List<TextEditingController> _assemblyControllers = [];
-  DateTime _startDate = DateTime.now();
+  late DateTime _startDate;
   bool _isLoading = false;
   String? _errorMessage;
 
@@ -37,36 +36,13 @@ class _RegisterDistrictScreenState extends ConsumerState<RegisterDistrictScreen>
   void initState() {
     super.initState();
     _districtNameController = TextEditingController(text: widget.initialName ?? '');
-    if (widget.initialAssemblies != null && widget.initialAssemblies!.isNotEmpty) {
-      for (final name in widget.initialAssemblies!) {
-        _assemblyControllers.add(TextEditingController(text: name));
-      }
-    } else {
-      _assemblyControllers.add(TextEditingController(text: 'Central Assembly'));
-    }
+    _startDate = widget.initialStartDate ?? DateTime.now();
   }
 
   @override
   void dispose() {
     _districtNameController.dispose();
-    for (final c in _assemblyControllers) {
-      c.dispose();
-    }
     super.dispose();
-  }
-
-  void _addAssemblyField() {
-    setState(() {
-      _assemblyControllers.add(TextEditingController());
-    });
-  }
-
-  void _removeAssemblyField(int index) {
-    if (_assemblyControllers.length > 1) {
-      setState(() {
-        _assemblyControllers.removeAt(index).dispose();
-      });
-    }
   }
 
   Future<void> _selectStartDate() async {
@@ -98,18 +74,6 @@ class _RegisterDistrictScreenState extends ConsumerState<RegisterDistrictScreen>
   Future<void> _submitRegistration() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final assemblies = _assemblyControllers
-        .map((c) => c.text.trim())
-        .where((t) => t.isNotEmpty)
-        .toList();
-
-    if (assemblies.isEmpty) {
-      setState(() {
-        _errorMessage = 'Please add at least one assembly.';
-      });
-      return;
-    }
-
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -122,19 +86,19 @@ class _RegisterDistrictScreenState extends ConsumerState<RegisterDistrictScreen>
         await repo.resubmitDistrict(
           districtId: widget.initialDistrictId!,
           name: _districtNameController.text.trim(),
-          assemblies: assemblies,
           startDate: _startDate,
         );
       } else {
         // New Registration
         await repo.registerDistrict(
           name: _districtNameController.text.trim(),
-          assemblies: assemblies,
           startDate: _startDate,
         );
       }
 
+      await ref.read(authStateProvider.notifier).refreshProfile();
       await ref.read(districtsListProvider.notifier).refresh();
+
       if (mounted) {
         context.go('/pastor/waiting-approval');
       }
@@ -174,6 +138,7 @@ class _RegisterDistrictScreenState extends ConsumerState<RegisterDistrictScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                // Welcome / Resubmit banner
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
@@ -218,7 +183,7 @@ class _RegisterDistrictScreenState extends ConsumerState<RegisterDistrictScreen>
                   const SizedBox(height: 16),
                 ],
 
-                // District Name
+                // 1. District Name
                 AppTextField(
                   label: 'District Name',
                   hintText: 'e.g. Abuakwa Central',
@@ -236,58 +201,7 @@ class _RegisterDistrictScreenState extends ConsumerState<RegisterDistrictScreen>
                 ),
                 const SizedBox(height: 20),
 
-                // Assemblies
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Local Assemblies',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.text,
-                      ),
-                    ),
-                    TextButton.icon(
-                      onPressed: _addAssemblyField,
-                      icon: const Icon(Icons.add, size: 18, color: AppColors.navy),
-                      label: const Text('Add Assembly', style: TextStyle(color: AppColors.navy, fontWeight: FontWeight.bold)),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-
-                ...List.generate(_assemblyControllers.length, (index) {
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: AppTextField(
-                            label: 'Assembly ${index + 1}',
-                            hintText: 'e.g. Central Assembly',
-                            prefixIcon: const Icon(Icons.home_work_outlined),
-                            controller: _assemblyControllers[index],
-                            validator: (val) {
-                              if (index == 0 && (val == null || val.trim().isEmpty)) {
-                                return 'Please enter at least one assembly';
-                              }
-                              return null;
-                            },
-                          ),
-                        ),
-                        if (_assemblyControllers.length > 1)
-                          IconButton(
-                            icon: const Icon(Icons.remove_circle_outline, color: AppColors.error),
-                            onPressed: () => _removeAssemblyField(index),
-                          ),
-                      ],
-                    ),
-                  );
-                }),
-                const SizedBox(height: 14),
-
-                // Start Date
+                // 2. Tenure Start Date
                 const Text(
                   'Tenure Start Date',
                   style: TextStyle(
@@ -323,9 +237,9 @@ class _RegisterDistrictScreenState extends ConsumerState<RegisterDistrictScreen>
                 ),
                 const SizedBox(height: 32),
 
-                // Submit Button
+                // 3. Submit Button
                 PrimaryButton(
-                  text: isResubmitting ? 'Resubmit for Approval' : 'Submit District Registration',
+                  text: 'Submit for approval',
                   isLoading: _isLoading,
                   onPressed: _submitRegistration,
                 ),

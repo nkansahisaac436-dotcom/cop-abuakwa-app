@@ -21,6 +21,7 @@ class DistrictModel {
   final DistrictStatus status;
   final String? registeredBy;
   final DateTime? submittedAt;
+  final DateTime? startDate;
   final String? decidedBy;
   final DateTime? decidedAt;
   final String? decisionNote;
@@ -39,6 +40,7 @@ class DistrictModel {
     this.status = DistrictStatus.pending,
     this.registeredBy,
     this.submittedAt,
+    this.startDate,
     this.decidedBy,
     this.decidedAt,
     this.decisionNote,
@@ -86,6 +88,9 @@ class DistrictModel {
       submittedAt: json['submitted_at'] != null
           ? DateTime.tryParse(json['submitted_at'] as String)
           : null,
+      startDate: json['start_date'] != null
+          ? DateTime.tryParse(json['start_date'] as String)
+          : null,
       decidedBy: json['decided_by'] as String?,
       decidedAt: json['decided_at'] != null
           ? DateTime.tryParse(json['decided_at'] as String)
@@ -111,6 +116,7 @@ class DistrictModel {
       'status': status.value,
       'registered_by': registeredBy,
       'submitted_at': submittedAt?.toIso8601String(),
+      'start_date': startDate?.toIso8601String().split('T').first,
       'decided_by': decidedBy,
       'decided_at': decidedAt?.toIso8601String(),
       'decision_note': decisionNote,
@@ -126,6 +132,7 @@ class DistrictModel {
     DistrictStatus? status,
     String? registeredBy,
     DateTime? submittedAt,
+    DateTime? startDate,
     String? decidedBy,
     DateTime? decidedAt,
     String? decisionNote,
@@ -142,6 +149,7 @@ class DistrictModel {
       status: status ?? this.status,
       registeredBy: registeredBy ?? this.registeredBy,
       submittedAt: submittedAt ?? this.submittedAt,
+      startDate: startDate ?? this.startDate,
       decidedBy: decidedBy ?? this.decidedBy,
       decidedAt: decidedAt ?? this.decidedAt,
       decisionNote: decisionNote ?? this.decisionNote,

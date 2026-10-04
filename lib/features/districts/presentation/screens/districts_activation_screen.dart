@@ -9,6 +9,7 @@ import '../../../../core/widgets/primary_button.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../domain/models/district_model.dart';
 import '../providers/districts_provider.dart';
+import 'district_assemblies_screen.dart';
 
 class DistrictsActivationScreen extends ConsumerStatefulWidget {
   const DistrictsActivationScreen({super.key});
@@ -36,7 +37,6 @@ class _DistrictsActivationScreenState extends ConsumerState<DistrictsActivationS
 
   void _showAddDistrictModal() {
     final nameController = TextEditingController();
-    final assemblyControllers = [TextEditingController(text: 'Central Assembly')];
     String? modalError;
     bool isSaving = false;
 
@@ -83,47 +83,6 @@ class _DistrictsActivationScreenState extends ConsumerState<DistrictsActivationS
                   prefixIcon: const Icon(Icons.location_city),
                   controller: nameController,
                 ),
-                const SizedBox(height: 14),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('Assemblies', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                    TextButton.icon(
-                      onPressed: () {
-                        setModalState(() {
-                          assemblyControllers.add(TextEditingController());
-                        });
-                      },
-                      icon: const Icon(Icons.add, size: 16, color: AppColors.navy),
-                      label: const Text('Add', style: TextStyle(color: AppColors.navy, fontSize: 12, fontWeight: FontWeight.bold)),
-                    ),
-                  ],
-                ),
-                ...List.generate(assemblyControllers.length, (idx) {
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: AppTextField(
-                            label: 'Assembly ${idx + 1}',
-                            hintText: 'e.g. Bethel Assembly',
-                            controller: assemblyControllers[idx],
-                          ),
-                        ),
-                        if (assemblyControllers.length > 1)
-                          IconButton(
-                            icon: const Icon(Icons.remove_circle_outline, color: AppColors.error, size: 20),
-                            onPressed: () {
-                              setModalState(() {
-                                assemblyControllers.removeAt(idx).dispose();
-                              });
-                            },
-                          ),
-                      ],
-                    ),
-                  );
-                }),
                 const SizedBox(height: 20),
                 PrimaryButton(
                   text: 'Create District (Active)',
@@ -134,10 +93,6 @@ class _DistrictsActivationScreenState extends ConsumerState<DistrictsActivationS
                       setModalState(() => modalError = 'Please enter a district name.');
                       return;
                     }
-                    final assemblies = assemblyControllers
-                        .map((c) => c.text.trim())
-                        .where((t) => t.isNotEmpty)
-                        .toList();
 
                     setModalState(() {
                       isSaving = true;
@@ -146,7 +101,7 @@ class _DistrictsActivationScreenState extends ConsumerState<DistrictsActivationS
 
                     try {
                       final repo = ref.read(districtsRepositoryProvider);
-                      await repo.addDistrictDirectly(name: name, assemblies: assemblies);
+                      await repo.addDistrictDirectly(name: name);
                       await ref.read(districtsListProvider.notifier).refresh();
                       if (ctx.mounted) Navigator.pop(ctx);
                       if (mounted) {
@@ -201,7 +156,7 @@ class _DistrictsActivationScreenState extends ConsumerState<DistrictsActivationS
                 autofocus: true,
                 maxLines: 3,
                 decoration: InputDecoration(
-                  hintText: 'e.g. Please correct assembly names or verify tenure start date...',
+                  hintText: 'e.g. Please verify district name or tenure start date...',
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                 ),
               ),
@@ -227,9 +182,7 @@ class _DistrictsActivationScreenState extends ConsumerState<DistrictsActivationS
 
                 Navigator.pop(ctx);
                 try {
-                  final repo = ref.read(districtsRepositoryProvider);
-                  await repo.rejectDistrict(district.id, note: note);
-                  await ref.read(districtsListProvider.notifier).refresh();
+                  await ref.read(districtsListProvider.notifier).rejectDistrict(district.id, note: note);
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text('Registration for "${district.name}" rejected.')),
@@ -253,9 +206,7 @@ class _DistrictsActivationScreenState extends ConsumerState<DistrictsActivationS
 
   Future<void> _approveDistrict(DistrictModel district) async {
     try {
-      final repo = ref.read(districtsRepositoryProvider);
-      await repo.approveDistrict(district.id);
-      await ref.read(districtsListProvider.notifier).refresh();
+      await ref.read(districtsListProvider.notifier).approveDistrict(district.id);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -323,6 +274,14 @@ class _DistrictsActivationScreenState extends ConsumerState<DistrictsActivationS
         ],
       ),
     );
+  }
+
+  String _getInitials(String name) {
+    final clean = name.trim();
+    if (clean.isEmpty) return 'P';
+    final parts = clean.split(' ').where((s) => s.isNotEmpty).toList();
+    if (parts.length == 1) return parts.first[0].toUpperCase();
+    return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
   }
 
   @override
@@ -489,7 +448,9 @@ class _DistrictsActivationScreenState extends ConsumerState<DistrictsActivationS
       separatorBuilder: (_, _) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
         final district = filtered[index];
-        final pastorName = district.pastorName ?? 'Assigned Pastor';
+        final pastorName = (district.pastorName != null && district.pastorName!.isNotEmpty)
+            ? district.pastorName!
+            : 'Assigned Pastor';
         final pastorPhoto = district.pastorPhotoUrl;
 
         return Card(
@@ -504,16 +465,23 @@ class _DistrictsActivationScreenState extends ConsumerState<DistrictsActivationS
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     CircleAvatar(
-                      radius: 22,
+                      radius: 24,
                       backgroundColor: AppColors.navy,
                       backgroundImage: pastorPhoto != null && pastorPhoto.isNotEmpty
                           ? CachedNetworkImageProvider(pastorPhoto)
                           : null,
                       child: (pastorPhoto == null || pastorPhoto.isEmpty)
-                          ? const Icon(Icons.person, color: AppColors.white, size: 22)
+                          ? Text(
+                              _getInitials(pastorName),
+                              style: const TextStyle(
+                                color: AppColors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            )
                           : null,
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 14),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -526,41 +494,27 @@ class _DistrictsActivationScreenState extends ConsumerState<DistrictsActivationS
                               color: AppColors.navyDark,
                             ),
                           ),
-                          const SizedBox(height: 2),
+                          const SizedBox(height: 3),
                           Text(
-                            'Registered by: $pastorName',
-                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.text),
+                            pastorName,
+                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: AppColors.text),
                           ),
+                          const SizedBox(height: 4),
                           if (district.submittedAt != null)
                             Text(
                               'Submitted on ${DateFormat.yMMMd().format(district.submittedAt!)}',
-                              style: const TextStyle(fontSize: 11, color: AppColors.softGrey),
+                              style: const TextStyle(fontSize: 12, color: AppColors.softGrey),
+                            ),
+                          if (district.startDate != null)
+                            Text(
+                              'Tenure Start: ${DateFormat.yMMMd().format(district.startDate!)}',
+                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.navy),
                             ),
                         ],
                       ),
                     ),
                   ],
                 ),
-                if (district.assemblyNames != null && district.assemblyNames!.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  const Text('Assemblies:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.softGrey)),
-                  const SizedBox(height: 4),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 4,
-                    children: district.assemblyNames!.map((a) {
-                      return Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: AppColors.background,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: AppColors.border),
-                        ),
-                        child: Text(a, style: const TextStyle(fontSize: 11, color: AppColors.text)),
-                      );
-                    }).toList(),
-                  ),
-                ],
                 const SizedBox(height: 16),
                 Row(
                   children: [
@@ -647,16 +601,35 @@ class _DistrictsActivationScreenState extends ConsumerState<DistrictsActivationS
                 fontWeight: FontWeight.w600,
               ),
             ),
-            trailing: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: isActive ? AppColors.disabled : AppColors.navy,
-                foregroundColor: isActive ? AppColors.text : AppColors.white,
-                shape: const StadiumBorder(),
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                minimumSize: const Size(80, 36),
-              ),
-              onPressed: () => _confirmToggleDeactivate(district, currentUserId),
-              child: Text(isActive ? 'Deactivate' : 'Activate', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.home_work_outlined, color: AppColors.navy, size: 20),
+                  tooltip: 'View Assemblies',
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => DistrictAssembliesScreen(
+                          districtId: district.id,
+                          districtName: district.name,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: isActive ? AppColors.disabled : AppColors.navy,
+                    foregroundColor: isActive ? AppColors.text : AppColors.white,
+                    shape: const StadiumBorder(),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    minimumSize: const Size(76, 34),
+                  ),
+                  onPressed: () => _confirmToggleDeactivate(district, currentUserId),
+                  child: Text(isActive ? 'Deactivate' : 'Activate', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                ),
+              ],
             ),
           ),
         );

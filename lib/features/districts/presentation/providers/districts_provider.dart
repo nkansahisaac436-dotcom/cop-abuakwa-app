@@ -32,10 +32,41 @@ class DistrictsNotifier extends AsyncNotifier<List<DistrictModel>> {
     state = AsyncValue.data(await repo.getDistricts());
   }
 
-  Future<void> addAssembly(String districtId, String name) async {
+  Future<void> approveDistrict(String districtId, {String? note}) async {
     final repo = ref.read(districtsRepositoryProvider);
-    await repo.addAssembly(districtId: districtId, name: name);
+    await repo.approveDistrict(districtId, note: note);
+    state = AsyncValue.data(await repo.getDistricts());
+  }
+
+  Future<void> rejectDistrict(String districtId, {required String note}) async {
+    final repo = ref.read(districtsRepositoryProvider);
+    await repo.rejectDistrict(districtId, note: note);
+    state = AsyncValue.data(await repo.getDistricts());
+  }
+
+  Future<AssemblyModel> addAssembly(String districtId, String name) async {
+    final repo = ref.read(districtsRepositoryProvider);
+    final asm = await repo.addAssembly(districtId: districtId, name: name);
     ref.invalidate(assembliesForDistrictProvider(districtId));
+    ref.invalidate(activeAssembliesForDistrictProvider(districtId));
+    state = AsyncValue.data(await repo.getDistricts());
+    return asm;
+  }
+
+  Future<AssemblyModel> renameAssembly(String districtId, String assemblyId, String newName) async {
+    final repo = ref.read(districtsRepositoryProvider);
+    final asm = await repo.renameAssembly(assemblyId: assemblyId, newName: newName);
+    ref.invalidate(assembliesForDistrictProvider(districtId));
+    ref.invalidate(activeAssembliesForDistrictProvider(districtId));
+    state = AsyncValue.data(await repo.getDistricts());
+    return asm;
+  }
+
+  Future<void> toggleAssemblyStatus(String districtId, String assemblyId, bool isActive) async {
+    final repo = ref.read(districtsRepositoryProvider);
+    await repo.toggleAssemblyStatus(assemblyId: assemblyId, isActive: isActive);
+    ref.invalidate(assembliesForDistrictProvider(districtId));
+    ref.invalidate(activeAssembliesForDistrictProvider(districtId));
     state = AsyncValue.data(await repo.getDistricts());
   }
 
@@ -50,4 +81,10 @@ final assembliesForDistrictProvider = FutureProvider.family<List<AssemblyModel>,
   if (districtId.isEmpty) return [];
   final repo = ref.watch(districtsRepositoryProvider);
   return repo.getAssembliesForDistrict(districtId);
+});
+
+final activeAssembliesForDistrictProvider = FutureProvider.family<List<AssemblyModel>, String>((ref, districtId) async {
+  if (districtId.isEmpty) return [];
+  final repo = ref.watch(districtsRepositoryProvider);
+  return repo.getAssembliesForDistrict(districtId, activeOnly: true);
 });

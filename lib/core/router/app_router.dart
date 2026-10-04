@@ -7,6 +7,9 @@ import '../../features/auth/presentation/screens/home_shell_screen.dart';
 import '../../features/auth/presentation/screens/invite_pastor_screen.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/signup_screen.dart';
+import '../../features/districts/domain/models/district_model.dart';
+import '../../features/districts/presentation/providers/districts_provider.dart';
+import '../../features/districts/presentation/screens/district_assemblies_screen.dart';
 import '../../features/districts/presentation/screens/districts_activation_screen.dart';
 import '../../features/districts/presentation/screens/register_district_screen.dart';
 import '../../features/districts/presentation/screens/waiting_approval_screen.dart';
@@ -31,6 +34,51 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         return isAuthRoute ? null : '/login';
       }
 
+      // 1. Pastor ONE unified routing rule:
+      if (user.isPastor) {
+        DistrictStatus? status = user.districtStatus;
+        if (status == null && user.districtId != null) {
+          final districts = ref.read(districtsListProvider).value;
+          if (districts != null) {
+            final match = districts.cast<DistrictModel?>().firstWhere(
+              (d) => d?.id == user.districtId || d?.registeredBy == user.id,
+              orElse: () => null,
+            );
+            status = match?.status;
+          }
+        }
+
+        // State A: No district linked yet -> "Register your district" screen
+        if (user.districtId == null && status == null) {
+          if (location != '/pastor/register-district' &&
+              location != '/profile' &&
+              location != '/notifications') {
+            return '/pastor/register-district';
+          }
+          return null;
+        }
+
+        // State B & C: District is pending or rejected -> "Waiting for Area Head approval" screen
+        if (status == DistrictStatus.pending || status == DistrictStatus.rejected) {
+          if (location != '/pastor/waiting-approval' &&
+              location != '/pastor/register-district' && // allows edit/resubmit
+              location != '/profile' &&
+              location != '/notifications') {
+            return '/pastor/waiting-approval';
+          }
+          return null;
+        }
+
+        // State D: District is active -> normal pastor dashboard
+        if (status == DistrictStatus.active) {
+          if (isAuthRoute ||
+              location == '/pastor/register-district' ||
+              location == '/pastor/waiting-approval') {
+            return '/pastor-home';
+          }
+        }
+      }
+
       // If user is authenticated and is on /login or /signup, redirect to their role home
       if (isAuthRoute) {
         switch (user.role) {
@@ -40,20 +88,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             if (user.districtId == null) {
               return '/pastor/register-district';
             }
-            return '/pastor-home';
+            if (user.districtStatus == DistrictStatus.active) {
+              return '/pastor-home';
+            }
+            return '/pastor/waiting-approval';
           case UserRole.ministryLeader:
             return '/leader-home';
           case UserRole.member:
             return '/feed';
-        }
-      }
-
-      // If pastor has no district registered yet, keep them on register-district screen
-      if (user.isPastor && user.districtId == null) {
-        if (location != '/pastor/register-district' &&
-            location != '/profile' &&
-            location != '/notifications') {
-          return '/pastor/register-district';
         }
       }
 
@@ -93,6 +135,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/pastor/waiting-approval',
         name: 'waiting_approval',
         builder: (context, state) => const WaitingApprovalScreen(),
+      ),
+      GoRoute(
+        path: '/pastor/assemblies',
+        name: 'pastor_assemblies',
+        builder: (context, state) => const DistrictAssembliesScreen(),
       ),
       GoRoute(
         path: '/leader-home',
@@ -147,6 +194,10 @@ class AuthRouterRefreshListenable extends ChangeNotifier {
   AuthRouterRefreshListenable(Ref ref) {
     ref.listen<AsyncValue<UserProfile?>>(
       authStateProvider,
+      (previous, next) => notifyListeners(),
+    );
+    ref.listen<AsyncValue<List<DistrictModel>>>(
+      districtsListProvider,
       (previous, next) => notifyListeners(),
     );
   }

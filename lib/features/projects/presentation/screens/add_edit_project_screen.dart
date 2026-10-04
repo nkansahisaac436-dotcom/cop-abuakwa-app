@@ -11,6 +11,7 @@ import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../districts/domain/models/assembly_model.dart';
 import '../../../districts/domain/models/district_model.dart';
 import '../../../districts/presentation/providers/districts_provider.dart';
+import '../../../districts/presentation/screens/district_assemblies_screen.dart';
 import '../../domain/models/project_model.dart';
 import '../providers/projects_provider.dart';
 
@@ -73,7 +74,7 @@ class _AddEditProjectScreenState extends ConsumerState<AddEditProjectScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     final user = ref.read(authStateProvider).value;
-    final districtId = _selectedDistrict?.id ?? user?.districtId ?? 'd0000000-0000-0000-0000-000000000001';
+    final districtId = _selectedDistrict?.id ?? user?.districtId ?? '';
 
     setState(() {
       _isLoading = true;
@@ -85,7 +86,7 @@ class _AddEditProjectScreenState extends ConsumerState<AddEditProjectScreen> {
         districtId: districtId,
         districtName: _selectedDistrict?.name ?? user?.districtName ?? 'District',
         assemblyId: _selectedAssembly?.id,
-        assemblyName: _selectedAssembly?.name ?? 'Assembly',
+        assemblyName: _selectedAssembly?.name ?? 'District Central',
         title: _titleController.text.trim(),
         description: _descController.text.trim(),
         type: _type,
@@ -144,6 +145,10 @@ class _AddEditProjectScreenState extends ConsumerState<AddEditProjectScreen> {
     final user = ref.watch(authStateProvider).value;
     final isAreaHead = user?.isAreaHead ?? false;
     final isPastor = user?.isPastor ?? false;
+    final targetDistrictId = _selectedDistrict?.id ?? user?.districtId ?? '';
+    final assembliesAsync = targetDistrictId.isNotEmpty
+        ? ref.watch(activeAssembliesForDistrictProvider(targetDistrictId))
+        : const AsyncValue.data(<AssemblyModel>[]);
 
     return Scaffold(
       appBar: AppBar(
@@ -235,17 +240,98 @@ class _AddEditProjectScreenState extends ConsumerState<AddEditProjectScreen> {
                   districtsAsync.when(
                     loading: () => const Center(child: CircularProgressIndicator()),
                     error: (e, _) => Text('Error: $e'),
-                    data: (districts) => DropdownButtonFormField<DistrictModel>(
-                      initialValue: _selectedDistrict,
-                      items: districts.map((d) {
-                        return DropdownMenuItem(value: d, child: Text(d.name));
-                      }).toList(),
-                      onChanged: (val) => setState(() => _selectedDistrict = val),
-                      decoration: const InputDecoration(contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12)),
-                    ),
+                    data: (districts) {
+                      final activeDistricts = districts.where((d) => d.isActive).toList();
+                      return DropdownButtonFormField<DistrictModel>(
+                        initialValue: _selectedDistrict,
+                        items: activeDistricts.map((d) {
+                          return DropdownMenuItem(value: d, child: Text(d.name));
+                        }).toList(),
+                        onChanged: (val) {
+                          setState(() {
+                            _selectedDistrict = val;
+                            _selectedAssembly = null;
+                          });
+                        },
+                        decoration: const InputDecoration(contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12)),
+                      );
+                    },
                   ),
                   const SizedBox(height: 16),
                 ],
+
+                // Assembly Selector
+                Text(
+                  'Local Assembly',
+                  style: GoogleFonts.nunitoSans(
+                    fontSize: AppDimensions.fontSizeLabel,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                assembliesAsync.when(
+                  loading: () => const Center(child: CircularProgressIndicator()),
+                  error: (e, _) => Text('Error loading assemblies: $e'),
+                  data: (assemblies) {
+                    if (assemblies.isEmpty) {
+                      return Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppColors.warningFill,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.warningBorder),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Expanded(
+                              child: Text(
+                                'Add an assembly first',
+                                style: TextStyle(color: AppColors.warningText, fontWeight: FontWeight.w600, fontSize: 13),
+                              ),
+                            ),
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.navy,
+                                foregroundColor: AppColors.white,
+                                shape: const StadiumBorder(),
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                minimumSize: const Size(60, 32),
+                              ),
+                              onPressed: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => DistrictAssembliesScreen(
+                                      districtId: targetDistrictId,
+                                      districtName: _selectedDistrict?.name ?? user?.districtName,
+                                    ),
+                                  ),
+                                );
+                              },
+                              child: const Text('Add assembly', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+
+                    return DropdownButtonFormField<AssemblyModel>(
+                      initialValue: _selectedAssembly,
+                      items: assemblies.map((a) {
+                        return DropdownMenuItem(
+                          value: a,
+                          child: Text(a.name),
+                        );
+                      }).toList(),
+                      onChanged: (val) => setState(() => _selectedAssembly = val),
+                      decoration: const InputDecoration(
+                        hintText: 'Select Assembly (Optional)',
+                        contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 16),
 
                 // Description
                 AppTextField(

@@ -42,9 +42,6 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   bool get _isDistrictPendingOrInactive =>
       _selectedDistrict != null && (_selectedDistrict!.isPending || _selectedDistrict!.isInactive);
 
-  bool get _isFormInteractable =>
-      _selectedDistrict != null && _selectedDistrict!.isActive;
-
   Future<void> _handleSignUp() async {
     setState(() {
       _errorMessage = null;
@@ -117,8 +114,12 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   Widget build(BuildContext context) {
     final districtsAsync = ref.watch(districtsListProvider);
     final assembliesAsync = (_selectedDistrict != null && _selectedDistrict!.isActive)
-        ? ref.watch(assembliesForDistrictProvider(_selectedDistrict!.id))
+        ? ref.watch(activeAssembliesForDistrictProvider(_selectedDistrict!.id))
         : const AsyncValue.data(<AssemblyModel>[]);
+
+    final activeAssemblies = assembliesAsync.value ?? [];
+    final hasNoAssembliesYet = _selectedDistrict != null && _selectedDistrict!.isActive && assembliesAsync.hasValue && activeAssemblies.isEmpty;
+    final isFormInteractable = _selectedDistrict != null && _selectedDistrict!.isActive && !hasNoAssembliesYet;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -152,7 +153,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                         filterQuality: FilterQuality.high,
                         semanticLabel: 'Church of Pentecost logo',
                       ),
-                      const SizedBox(width: 48), // balances the back button
+                      const SizedBox(width: 48),
                     ],
                   ),
                   const SizedBox(height: 10),
@@ -400,22 +401,31 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                           ),
                         ],
 
+                        // No assemblies yet warning banner
+                        if (hasNoAssembliesYet) ...[
+                          const SizedBox(height: 14),
+                          const WarningBanner(
+                            title: 'No assemblies available',
+                            message: 'Your pastor has not added assemblies yet. Please try again soon.',
+                          ),
+                        ],
+
                         const SizedBox(height: 16),
 
-                        // Assembly Dropdown (Disabled if District is Inactive/Pending or Unselected)
+                        // Assembly Dropdown (Disabled if District has no assemblies or is Inactive/Pending)
                         Text(
                           AppStrings.assembly,
                           style: GoogleFonts.nunitoSans(
                             fontSize: AppDimensions.fontSizeLabel,
                             fontWeight: FontWeight.bold,
-                            color: _isFormInteractable ? AppColors.text : AppColors.softGrey,
+                            color: isFormInteractable ? AppColors.text : AppColors.softGrey,
                           ),
                         ),
                         const SizedBox(height: 6),
                         Container(
                           constraints: const BoxConstraints(minHeight: AppDimensions.minTouchTarget),
                           decoration: BoxDecoration(
-                            color: _isFormInteractable ? AppColors.white : AppColors.disabled,
+                            color: isFormInteractable ? AppColors.white : AppColors.disabled,
                             borderRadius: AppDimensions.inputBorderRadius,
                             border: Border.all(
                               color: AppColors.border,
@@ -431,7 +441,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                                 children: [
                                   Icon(
                                     Icons.place_outlined,
-                                    color: _isFormInteractable ? AppColors.softGrey : AppColors.disabledText,
+                                    color: isFormInteractable ? AppColors.softGrey : AppColors.disabledText,
                                     size: 20,
                                   ),
                                   const SizedBox(width: 8),
@@ -439,33 +449,30 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                                     AppStrings.chooseAssembly,
                                     style: GoogleFonts.nunitoSans(
                                       fontSize: AppDimensions.fontSizeInput,
-                                      color: _isFormInteractable ? AppColors.softGrey : AppColors.disabledText,
+                                      color: isFormInteractable ? AppColors.softGrey : AppColors.disabledText,
                                     ),
                                   ),
                                 ],
                               ),
                               icon: Icon(
                                 Icons.keyboard_arrow_down_rounded,
-                                color: _isFormInteractable ? AppColors.navy : AppColors.disabledText,
+                                color: isFormInteractable ? AppColors.navy : AppColors.disabledText,
                               ),
-                              items: _isFormInteractable
-                                  ? assembliesAsync.maybeWhen(
-                                      data: (assemblies) => assemblies.map((assembly) {
-                                        return DropdownMenuItem<AssemblyModel>(
-                                          value: assembly,
-                                          child: Text(
-                                            assembly.name,
-                                            style: GoogleFonts.nunitoSans(
-                                              fontSize: AppDimensions.fontSizeInput,
-                                              color: AppColors.text,
-                                            ),
+                              items: isFormInteractable
+                                  ? activeAssemblies.map((assembly) {
+                                      return DropdownMenuItem<AssemblyModel>(
+                                        value: assembly,
+                                        child: Text(
+                                          assembly.name,
+                                          style: GoogleFonts.nunitoSans(
+                                            fontSize: AppDimensions.fontSizeInput,
+                                            color: AppColors.text,
                                           ),
-                                        );
-                                      }).toList(),
-                                      orElse: () => [],
-                                    )
+                                        ),
+                                      );
+                                    }).toList()
                                   : null,
-                              onChanged: _isFormInteractable
+                              onChanged: isFormInteractable
                                   ? (value) {
                                       setState(() {
                                         _selectedAssembly = value;
@@ -477,16 +484,16 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                         ),
                         const SizedBox(height: 16),
 
-                        // Password Field (Disabled if Inactive)
+                        // Password Field (Disabled if Form not interactable)
                         AppTextField(
                           label: AppStrings.password,
                           hintText: AppStrings.createPassword,
                           controller: _passwordController,
                           isPassword: true,
-                          enabled: _isFormInteractable,
+                          enabled: isFormInteractable,
                           prefixIcon: const Icon(Icons.lock_outline),
                           validator: (value) {
-                            if (_isFormInteractable && (value == null || value.length < 6)) {
+                            if (isFormInteractable && (value == null || value.length < 6)) {
                               return 'Password must be at least 6 characters';
                             }
                             return null;
@@ -494,14 +501,14 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                         ),
                         const SizedBox(height: 16),
 
-                        // Consent Checkbox (Disabled if Inactive)
+                        // Consent Checkbox (Disabled if Form not interactable)
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
                             Checkbox(
                               value: _agreedToConsent,
                               activeColor: AppColors.navy,
-                              onChanged: _isFormInteractable
+                              onChanged: isFormInteractable
                                   ? (val) {
                                       setState(() {
                                         _agreedToConsent = val ?? false;
@@ -511,7 +518,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                             ),
                             Expanded(
                               child: GestureDetector(
-                                onTap: _isFormInteractable
+                                onTap: isFormInteractable
                                     ? () {
                                         setState(() {
                                           _agreedToConsent = !_agreedToConsent;
@@ -522,7 +529,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                                   AppStrings.dataConsent,
                                   style: GoogleFonts.nunitoSans(
                                     fontSize: 13,
-                                    color: _isFormInteractable ? AppColors.text : AppColors.disabledText,
+                                    color: isFormInteractable ? AppColors.text : AppColors.disabledText,
                                   ),
                                 ),
                               ),
@@ -535,9 +542,9 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                         PrimaryButton(
                           text: AppStrings.createAccount,
                           isLoading: _isLoading,
-                          backgroundColor: _isFormInteractable ? AppColors.navy : const Color(0xFFC4CBD4),
-                          textColor: _isFormInteractable ? AppColors.white : const Color(0xFF8C98A8),
-                          onPressed: _isFormInteractable ? _handleSignUp : null,
+                          backgroundColor: isFormInteractable ? AppColors.navy : const Color(0xFFC4CBD4),
+                          textColor: isFormInteractable ? AppColors.white : const Color(0xFF8C98A8),
+                          onPressed: isFormInteractable ? _handleSignUp : null,
                         ),
                       ],
                     ),

@@ -11,6 +11,7 @@ import '../../../../core/widgets/outline_button.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../domain/models/invite_model.dart';
 import '../../domain/models/profile_model.dart';
+import '../../../districts/domain/models/district_model.dart';
 import '../providers/auth_provider.dart';
 import 'signup_screen.dart';
 
@@ -142,8 +143,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               final pastorUser = ref.read(authStateProvider).value;
               if (pastorUser?.districtId == null) {
                 context.go('/pastor/register-district');
-              } else {
+              } else if (pastorUser?.districtStatus == DistrictStatus.active) {
                 context.go('/pastor-home');
+              } else {
+                context.go('/pastor/waiting-approval');
               }
               break;
             case UserRole.ministryLeader:
@@ -273,10 +276,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         if (router != null) {
           switch (_selectedRole) {
             case UserRole.pastor:
-              if (_verifiedInvite?.districtId == null) {
+              final pastorUser = ref.read(authStateProvider).value;
+              if (pastorUser?.districtId == null || _verifiedInvite?.districtId == null) {
                 context.go('/pastor/register-district');
-              } else {
+              } else if (pastorUser?.districtStatus == DistrictStatus.active) {
                 context.go('/pastor-home');
+              } else {
+                context.go('/pastor/waiting-approval');
               }
               break;
             case UserRole.ministryLeader:
