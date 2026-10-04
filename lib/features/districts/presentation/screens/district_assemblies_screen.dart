@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/constants/app_colors.dart';
-import '../../../../core/constants/app_dimensions.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../domain/models/assembly_model.dart';

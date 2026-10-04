@@ -6,25 +6,20 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:image/image.dart' as img;
 import 'package:cop_abuakwa_app/core/constants/app_strings.dart';
 import 'package:cop_abuakwa_app/core/network/supabase_client.dart';
-import 'package:cop_abuakwa_app/core/router/app_router.dart';
 import 'package:cop_abuakwa_app/core/utils/image_compressor.dart';
 import 'package:cop_abuakwa_app/core/widgets/author_attribution_header.dart';
-import 'package:cop_abuakwa_app/core/widgets/primary_button.dart';
 import 'package:cop_abuakwa_app/features/auth/data/auth_repository.dart';
 import 'package:cop_abuakwa_app/features/auth/domain/models/profile_model.dart';
 import 'package:cop_abuakwa_app/features/auth/presentation/providers/auth_provider.dart';
-import 'package:cop_abuakwa_app/features/auth/presentation/screens/login_screen.dart';
 import 'package:cop_abuakwa_app/features/auth/presentation/screens/signup_screen.dart';
 import 'package:cop_abuakwa_app/features/districts/data/districts_repository.dart';
 import 'package:cop_abuakwa_app/features/districts/domain/models/district_model.dart';
 import 'package:cop_abuakwa_app/features/districts/presentation/providers/districts_provider.dart';
 import 'package:cop_abuakwa_app/features/districts/presentation/screens/district_assemblies_screen.dart';
 import 'package:cop_abuakwa_app/features/districts/presentation/screens/register_district_screen.dart';
-import 'package:cop_abuakwa_app/features/districts/presentation/screens/waiting_approval_screen.dart';
 import 'package:cop_abuakwa_app/features/feeds/data/feeds_repository.dart';
 import 'package:cop_abuakwa_app/features/meetings/data/meetings_repository.dart';
 import 'package:cop_abuakwa_app/features/projects/data/projects_repository.dart';
-import 'package:cop_abuakwa_app/features/projects/domain/models/project_model.dart';
 import 'package:cop_abuakwa_app/features/transfer/domain/models/tenure_archive_model.dart';
 import 'package:cop_abuakwa_app/features/transfer/utils/archive_pdf_generator.dart';
 import 'package:cop_abuakwa_app/main.dart';
@@ -331,7 +326,7 @@ void main() {
       final distRepo = container.read(districtsRepositoryProvider);
 
       // Create an active district with NO assemblies
-      final activeDist = await distRepo.addDistrictDirectly(name: 'Brand New District');
+      await distRepo.addDistrictDirectly(name: 'Brand New District');
 
       await tester.pumpWidget(
         UncontrolledProviderScope(

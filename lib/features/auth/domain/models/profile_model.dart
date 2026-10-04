@@ -125,7 +125,7 @@ class UserProfile {
 
     if (json['districts'] != null && json['districts'] is Map) {
       final dMap = json['districts'] as Map<String, dynamic>;
-      if (dName == null) dName = dMap['name'] as String?;
+      dName ??= dMap['name'] as String?;
       dStatus = DistrictStatus.fromString(dMap['status'] as String?);
     } else if (json['district_status'] != null) {
       dStatus = DistrictStatus.fromString(json['district_status'] as String?);
